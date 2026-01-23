@@ -1,0 +1,53 @@
+{
+  "name": "@agiletortoise/drafts-mcp-server",
+  "version": "1.0.0",
+  "description": "Model Context Protocol server for Drafts app on macOS",
+  "type": "module",
+  "main": "dist/index.js",
+  "bin": {
+    "drafts-mcp-server": "dist/index.js"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "watch": "tsc --watch",
+    "prepare": "npm run build",
+    "inspector": "npx @modelcontextprotocol/inspector node dist/index.js"
+  },
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "drafts",
+    "applescript",
+    "macos",
+    "automation",
+    "ai"
+  ],
+  "author": "Agile Tortoise",
+  "license": "MIT",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "os": [
+    "darwin"
+  ],
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.4"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.5",
+    "typescript": "^5.7.3"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/agiletortoise/drafts-mcp-server.git"
+  },
+  "bugs": {
+    "url": "https://github.com/agiletortoise/drafts-mcp-server/issues"
+  },
+  "homepage": "https://github.com/agiletortoise/drafts-mcp-server#readme"
+}

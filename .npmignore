@@ -1,0 +1,28 @@
+# Source files (keep TypeScript out of published package)
+src/
+tsconfig.json
+.gitignore
+
+# Development files
+.vscode/
+.idea/
+*.log
+.DS_Store
+.env
+
+# Test files
+test/
+*.test.ts
+*.spec.ts
+
+# CI/CD
+.github/
+.gitlab-ci.yml
+.travis.yml
+
+# Documentation source (keep compiled docs)
+docs/
+
+# Examples and demos
+examples/
+demos/

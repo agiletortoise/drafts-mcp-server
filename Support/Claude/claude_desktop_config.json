@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+	"drafts": {
+	  "command": "npx",
+	  "args": ["/Users/greg/p-claude/drafts-mcp-server"]
+	}
+  }
+}
