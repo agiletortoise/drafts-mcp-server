@@ -513,6 +513,29 @@ export async function trashDraft(uuid: string): Promise<boolean> {
   return result === 'SUCCESS';
 }
 
+/**
+ * Open a draft in the Drafts editor
+ */
+export async function openDraft(uuid: string): Promise<boolean> {
+  const escapedUuid = escapeAppleScriptString(uuid);
+
+  const script = `
+    tell application "Drafts"
+      try
+        activate
+        set targetDraft to draft id "${escapedUuid}"
+        open targetDraft
+        return "SUCCESS"
+      on error errMsg
+        return "ERROR: " & errMsg
+      end try
+    end tell
+  `;
+
+  const result = await executeAppleScript(script);
+  return result === 'SUCCESS';
+}
+
 // Helper functions for parsing AppleScript output
 
 /**

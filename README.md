@@ -14,7 +14,7 @@ A [Model Context Protocol](https://modelcontextprotocol.io) (MCP) server that en
 ## Requirements
 
 - macOS (AppleScript is macOS-only)
-- [Drafts](https://getdrafts.com) app installed
+- [Drafts](https://getdrafts.com) app v50.0 or greater installed
 - Node.js 18 or higher
 
 ## Installation

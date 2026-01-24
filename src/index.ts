@@ -271,6 +271,20 @@ const TOOLS: Tool[] = [
       required: ['uuid'],
     },
   },
+  {
+    name: 'drafts_open',
+    description: 'Open a draft in the Drafts editor',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        uuid: {
+          type: 'string',
+          description: 'The UUID of the draft to open',
+        },
+      },
+      required: ['uuid'],
+    },
+  },
 ];
 
 /**
@@ -556,6 +570,20 @@ class DraftsMCPServer {
                 {
                   type: 'text',
                   text: success ? `Trashed draft ${uuid}` : `Failed to trash draft ${uuid}`,
+                },
+              ],
+              isError: !success,
+            };
+          }
+
+          case 'drafts_open': {
+            const { uuid } = args as { uuid: string };
+            const success = await drafts.openDraft(uuid);
+            return {
+              content: [
+                {
+                  type: 'text',
+                  text: success ? `Opened draft ${uuid}` : `Failed to open draft ${uuid}`,
                 },
               ],
               isError: !success,
