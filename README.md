@@ -14,7 +14,7 @@ A [Model Context Protocol](https://modelcontextprotocol.io) (MCP) server that en
 ## Requirements
 
 - macOS (AppleScript is macOS-only)
-- [Drafts](https://getdrafts.com) app v50.0.1 or greater installed
+- [Drafts](https://getdrafts.com) app v50.0.2 or greater installed
 - Node.js 18 or higher
 
 ## Installation
@@ -122,12 +122,56 @@ Or if globally installed:
 }
 ```
 
+### Configuration for Claude Code
+
+Claude Code (the CLI tool) can be configured using the `/mcp` command or by editing the settings file directly.
+
+**Using the CLI:**
+
+```bash
+claude mcp add drafts -- npx @agiletortoise/drafts-mcp-server
+```
+
+**Or manually edit** `~/.claude/settings.json`:
+
+```json
+{
+  "mcpServers": {
+    "drafts": {
+      "command": "npx",
+      "args": ["@agiletortoise/drafts-mcp-server"]
+    }
+  }
+}
+```
+
+**For local development/testing**, use:
+
+```bash
+claude mcp add drafts -- node /absolute/path/to/drafts-mcp-server/dist/index.js
+```
+
+Or in `~/.claude/settings.json`:
+
+```json
+{
+  "mcpServers": {
+    "drafts": {
+      "command": "node",
+      "args": ["/absolute/path/to/drafts-mcp-server/dist/index.js"]
+    }
+  }
+}
+```
+
+After adding, restart Claude Code or start a new session for the MCP server to be available.
+
 ## Permissions
 
 The first time the server runs, macOS will ask for permissions:
 
 1. **System Preferences** > **Security & Privacy** > **Privacy** > **Automation**
-2. Allow the MCP host (e.g., Claude Desktop, Cursor) to control **Drafts**
+2. Allow the MCP host (e.g., Claude Desktop, Claude Code, Cursor) to control **Drafts**
 
 ## Available Tools
 
