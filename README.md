@@ -2,6 +2,8 @@
 
 A [Model Context Protocol](https://modelcontextprotocol.io) (MCP) server that enables AI assistants to interact with the [Drafts](https://getdrafts.com) app on macOS through AppleScript.
 
+For additional discussion of uses, see [the Drafts forum](https://forums.getdrafts.com/t/drafts-mcp-server-for-ai-integration/16507)
+
 ## Features
 
 - 📝 **Draft Management**: Create, read, update, and search drafts
@@ -161,12 +163,13 @@ List all workspaces in Drafts.
 ### Draft Operations
 
 #### `drafts_get_drafts`
-Get drafts from a specific workspace with optional filtering.
+Get drafts with flexible filtering by content, folder, tag, flagged status, and dates.
 
 ```typescript
 {
-  workspaceName: string;  // Required: Name of the workspace
-  query?: string;         // Optional: Query string to filter drafts
+  query?: string;                // Optional: Query string to filter drafts
+  folder?: inbox, archive, trash // Optional: Limit to one folder
+  tag: string                    // Optional: Limit by assigned tag
 }
 ```
 
