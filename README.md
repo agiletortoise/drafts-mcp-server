@@ -132,36 +132,10 @@ Claude Code (the CLI tool) can be configured using the `/mcp` command or by edit
 claude mcp add drafts -- npx @agiletortoise/drafts-mcp-server
 ```
 
-**Or manually edit** `~/.claude/settings.json`:
-
-```json
-{
-  "mcpServers": {
-    "drafts": {
-      "command": "npx",
-      "args": ["@agiletortoise/drafts-mcp-server"]
-    }
-  }
-}
-```
-
 **For local development/testing**, use:
 
 ```bash
 claude mcp add drafts -- node /absolute/path/to/drafts-mcp-server/dist/index.js
-```
-
-Or in `~/.claude/settings.json`:
-
-```json
-{
-  "mcpServers": {
-    "drafts": {
-      "command": "node",
-      "args": ["/absolute/path/to/drafts-mcp-server/dist/index.js"]
-    }
-  }
-}
 ```
 
 After adding, restart Claude Code or start a new session for the MCP server to be available.
