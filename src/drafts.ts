@@ -13,12 +13,16 @@ export interface Draft {
   folder: 'inbox' | 'archive' | 'trash';
   tags: string[];
   /** ISO 8601 date string */
-  createdAt: string;
+  creationDate: string;
   /** ISO 8601 date string */
-  modifiedAt: string;
+  modificationDate: string;
   /** ISO 8601 date string */
-  accessedAt: string;
+  accessDate: string;
   permalink: string;
+  creationLatitude: number;
+  creationLongitude: number;
+  modificationLatitude: number;
+  modificationLongitude: number;
 }
 
 export interface Action {
@@ -86,10 +90,14 @@ export async function getCurrentDraft(): Promise<Draft | null> {
         set props to props & "<<SEP>>FLAGGED:" & flagged of theDraft
         set props to props & "<<SEP>>FOLDER:" & folder of theDraft
         set props to props & "<<SEP>>TAGS:" & ((tags of theDraft) as string)
-        set props to props & "<<SEP>>CREATED:" & ((createdAt of theDraft) as string)
-        set props to props & "<<SEP>>MODIFIED:" & ((modifiedAt of theDraft) as string)
-        set props to props & "<<SEP>>ACCESSED:" & ((accessedAt of theDraft) as string)
+        set props to props & "<<SEP>>CREATED:" & ((creation date of theDraft) as string)
+        set props to props & "<<SEP>>MODIFIED:" & ((modification date of theDraft) as string)
+        set props to props & "<<SEP>>ACCESSED:" & ((access date of theDraft) as string)
         set props to props & "<<SEP>>PERMALINK:" & permalink of theDraft
+        set props to props & "<<SEP>>CREATION_LAT:" & creation latitude of theDraft
+        set props to props & "<<SEP>>CREATION_LON:" & creation longitude of theDraft
+        set props to props & "<<SEP>>MODIFICATION_LAT:" & modification latitude of theDraft
+        set props to props & "<<SEP>>MODIFICATION_LON:" & modification longitude of theDraft
         return props
       on error errMsg
         return "NOT_FOUND:" & errMsg
@@ -133,10 +141,14 @@ export async function getWorkspaceDrafts(
         set props to props & "<<SEP>>FLAGGED:" & flagged of theDraft
         set props to props & "<<SEP>>FOLDER:" & folder of theDraft
         set props to props & "<<SEP>>TAGS:" & ((tags of theDraft) as string)
-        set props to props & "<<SEP>>CREATED:" & ((createdAt of theDraft) as string)
-        set props to props & "<<SEP>>MODIFIED:" & ((modifiedAt of theDraft) as string)
-        set props to props & "<<SEP>>ACCESSED:" & ((accessedAt of theDraft) as string)
+        set props to props & "<<SEP>>CREATED:" & ((creation date of theDraft) as string)
+        set props to props & "<<SEP>>MODIFIED:" & ((modification date of theDraft) as string)
+        set props to props & "<<SEP>>ACCESSED:" & ((access date of theDraft) as string)
         set props to props & "<<SEP>>PERMALINK:" & permalink of theDraft
+        set props to props & "<<SEP>>CREATION_LAT:" & creation latitude of theDraft
+        set props to props & "<<SEP>>CREATION_LON:" & creation longitude of theDraft
+        set props to props & "<<SEP>>MODIFICATION_LAT:" & modification latitude of theDraft
+        set props to props & "<<SEP>>MODIFICATION_LON:" & modification longitude of theDraft
         set results to results & props & "<<END>>"
       end repeat
 
@@ -185,22 +197,22 @@ export async function getDrafts(filter: DraftFilter): Promise<Draft[]> {
 
   if (filter.createdAfter) {
     dateSetup.push(`set createdAfterDate to date "${toAppleScriptDate(filter.createdAfter)}"`);
-    conditions.push(`createdAt > createdAfterDate`);
+    conditions.push(`creation date > createdAfterDate`);
   }
 
   if (filter.createdBefore) {
     dateSetup.push(`set createdBeforeDate to date "${toAppleScriptDate(filter.createdBefore)}"`);
-    conditions.push(`createdAt < createdBeforeDate`);
+    conditions.push(`creation date < createdBeforeDate`);
   }
 
   if (filter.modifiedAfter) {
     dateSetup.push(`set modifiedAfterDate to date "${toAppleScriptDate(filter.modifiedAfter)}"`);
-    conditions.push(`modifiedAt > modifiedAfterDate`);
+    conditions.push(`modification date > modifiedAfterDate`);
   }
 
   if (filter.modifiedBefore) {
     dateSetup.push(`set modifiedBeforeDate to date "${toAppleScriptDate(filter.modifiedBefore)}"`);
-    conditions.push(`modifiedAt < modifiedBeforeDate`);
+    conditions.push(`modification date < modifiedBeforeDate`);
   }
 
   const whereClause = conditions.length > 0
@@ -221,10 +233,14 @@ export async function getDrafts(filter: DraftFilter): Promise<Draft[]> {
         set props to props & "<<SEP>>FLAGGED:" & flagged of theDraft
         set props to props & "<<SEP>>FOLDER:" & folder of theDraft
         set props to props & "<<SEP>>TAGS:" & ((tags of theDraft) as string)
-        set props to props & "<<SEP>>CREATED:" & ((createdAt of theDraft) as string)
-        set props to props & "<<SEP>>MODIFIED:" & ((modifiedAt of theDraft) as string)
-        set props to props & "<<SEP>>ACCESSED:" & ((accessedAt of theDraft) as string)
+        set props to props & "<<SEP>>CREATED:" & ((creation date of theDraft) as string)
+        set props to props & "<<SEP>>MODIFIED:" & ((modification date of theDraft) as string)
+        set props to props & "<<SEP>>ACCESSED:" & ((access date of theDraft) as string)
         set props to props & "<<SEP>>PERMALINK:" & permalink of theDraft
+        set props to props & "<<SEP>>CREATION_LAT:" & creation latitude of theDraft
+        set props to props & "<<SEP>>CREATION_LON:" & creation longitude of theDraft
+        set props to props & "<<SEP>>MODIFICATION_LAT:" & modification latitude of theDraft
+        set props to props & "<<SEP>>MODIFICATION_LON:" & modification longitude of theDraft
         set results to results & props & "<<END>>"
       end repeat
 
@@ -278,10 +294,14 @@ export async function getDraft(uuid: string): Promise<Draft | null> {
         set props to props & "<<SEP>>FLAGGED:" & flagged of theDraft
         set props to props & "<<SEP>>FOLDER:" & folder of theDraft
         set props to props & "<<SEP>>TAGS:" & ((tags of theDraft) as string)
-        set props to props & "<<SEP>>CREATED:" & ((createdAt of theDraft) as string)
-        set props to props & "<<SEP>>MODIFIED:" & ((modifiedAt of theDraft) as string)
-        set props to props & "<<SEP>>ACCESSED:" & ((accessedAt of theDraft) as string)
+        set props to props & "<<SEP>>CREATED:" & ((creation date of theDraft) as string)
+        set props to props & "<<SEP>>MODIFIED:" & ((modification date of theDraft) as string)
+        set props to props & "<<SEP>>ACCESSED:" & ((access date of theDraft) as string)
         set props to props & "<<SEP>>PERMALINK:" & permalink of theDraft
+        set props to props & "<<SEP>>CREATION_LAT:" & creation latitude of theDraft
+        set props to props & "<<SEP>>CREATION_LON:" & creation longitude of theDraft
+        set props to props & "<<SEP>>MODIFICATION_LAT:" & modification latitude of theDraft
+        set props to props & "<<SEP>>MODIFICATION_LON:" & modification longitude of theDraft
         return props
       on error errMsg
         return "NOT_FOUND:" & errMsg
@@ -411,10 +431,14 @@ export async function searchDrafts(query: string): Promise<Draft[]> {
         set props to props & "<<SEP>>FLAGGED:" & flagged of theDraft
         set props to props & "<<SEP>>FOLDER:" & folder of theDraft
         set props to props & "<<SEP>>TAGS:" & ((tags of theDraft) as string)
-        set props to props & "<<SEP>>CREATED:" & ((createdAt of theDraft) as string)
-        set props to props & "<<SEP>>MODIFIED:" & ((modifiedAt of theDraft) as string)
-        set props to props & "<<SEP>>ACCESSED:" & ((accessedAt of theDraft) as string)
+        set props to props & "<<SEP>>CREATED:" & ((creation date of theDraft) as string)
+        set props to props & "<<SEP>>MODIFIED:" & ((modification date of theDraft) as string)
+        set props to props & "<<SEP>>ACCESSED:" & ((access date of theDraft) as string)
         set props to props & "<<SEP>>PERMALINK:" & permalink of theDraft
+        set props to props & "<<SEP>>CREATION_LAT:" & creation latitude of theDraft
+        set props to props & "<<SEP>>CREATION_LON:" & creation longitude of theDraft
+        set props to props & "<<SEP>>MODIFICATION_LAT:" & modification latitude of theDraft
+        set props to props & "<<SEP>>MODIFICATION_LON:" & modification longitude of theDraft
         set results to results & props & "<<END>>"
       end repeat
       return results
@@ -567,10 +591,14 @@ function parseDraftProperties(propsStr: string): Draft {
     flagged: props['FLAGGED'] === 'true',
     folder: (props['FOLDER'] || 'inbox') as 'inbox' | 'archive' | 'trash',
     tags: props['TAGS'] ? props['TAGS'].split(', ').filter(t => t) : [],
-    createdAt: props['CREATED'] ? parseAppleScriptDate(props['CREATED']) : '',
-    modifiedAt: props['MODIFIED'] ? parseAppleScriptDate(props['MODIFIED']) : '',
-    accessedAt: props['ACCESSED'] ? parseAppleScriptDate(props['ACCESSED']) : '',
+    creationDate: props['CREATED'] ? parseAppleScriptDate(props['CREATED']) : '',
+    modificationDate: props['MODIFIED'] ? parseAppleScriptDate(props['MODIFIED']) : '',
+    accessDate: props['ACCESSED'] ? parseAppleScriptDate(props['ACCESSED']) : '',
     permalink: props['PERMALINK'] || '',
+    creationLatitude: parseFloat(props['CREATION_LAT']) || 0,
+    creationLongitude: parseFloat(props['CREATION_LON']) || 0,
+    modificationLatitude: parseFloat(props['MODIFICATION_LAT']) || 0,
+    modificationLongitude: parseFloat(props['MODIFICATION_LON']) || 0,
   };
 }
 
