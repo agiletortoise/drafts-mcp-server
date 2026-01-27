@@ -421,7 +421,7 @@ export async function searchDrafts(query: string): Promise<Draft[]> {
 
   const script = `
     tell application "Drafts"
-      set searchResults to search for query "${escapedQuery}"
+      set searchResults to every draft whose content contains "${escapedQuery}"
       set results to ""
       repeat with d in searchResults
         set theDraft to contents of d
