@@ -12,6 +12,10 @@ export interface Draft {
   flagged: boolean;
   folder: 'inbox' | 'archive' | 'trash';
   tags: string[];
+  /** Comma-separated string of tag names */
+  tagNames: string;
+  /** Query tag names string */
+  queryTagNames: string;
   /** ISO 8601 date string */
   creationDate: string;
   /** ISO 8601 date string */
@@ -28,6 +32,11 @@ export interface Draft {
 export interface Action {
   name: string;
   uuid?: string;
+}
+
+export interface Tag {
+  name: string;
+  drafts?: Draft[];
 }
 
 export interface DraftFilter {
@@ -89,7 +98,9 @@ export async function getCurrentDraft(): Promise<Draft | null> {
         set props to props & "<<SEP>>CONTENT:" & content of theDraft
         set props to props & "<<SEP>>FLAGGED:" & flagged of theDraft
         set props to props & "<<SEP>>FOLDER:" & folder of theDraft
-        set props to props & "<<SEP>>TAGS:" & ((tags of theDraft) as string)
+        set props to props & "<<SEP>>TAGS:" & ((tag list of theDraft) as string)
+        set props to props & "<<SEP>>TAG_NAMES:" & tag names of theDraft
+        set props to props & "<<SEP>>QUERY_TAG_NAMES:" & query tag names of theDraft
         set props to props & "<<SEP>>CREATED:" & ((creation date of theDraft) as string)
         set props to props & "<<SEP>>MODIFIED:" & ((modification date of theDraft) as string)
         set props to props & "<<SEP>>ACCESSED:" & ((access date of theDraft) as string)
@@ -140,7 +151,9 @@ export async function getWorkspaceDrafts(
         set props to props & "<<SEP>>CONTENT:" & content of theDraft
         set props to props & "<<SEP>>FLAGGED:" & flagged of theDraft
         set props to props & "<<SEP>>FOLDER:" & folder of theDraft
-        set props to props & "<<SEP>>TAGS:" & ((tags of theDraft) as string)
+        set props to props & "<<SEP>>TAGS:" & ((tag list of theDraft) as string)
+        set props to props & "<<SEP>>TAG_NAMES:" & tag names of theDraft
+        set props to props & "<<SEP>>QUERY_TAG_NAMES:" & query tag names of theDraft
         set props to props & "<<SEP>>CREATED:" & ((creation date of theDraft) as string)
         set props to props & "<<SEP>>MODIFIED:" & ((modification date of theDraft) as string)
         set props to props & "<<SEP>>ACCESSED:" & ((access date of theDraft) as string)
@@ -188,7 +201,7 @@ export async function getDrafts(filter: DraftFilter): Promise<Draft[]> {
 
   if (filter.tag) {
     const escapedTag = escapeAppleScriptString(filter.tag);
-    conditions.push(`tags contains "${escapedTag}"`);
+    conditions.push(`query tag names contains "#${escapedTag}#"`);
   }
 
   if (filter.flagged !== undefined) {
@@ -232,7 +245,9 @@ export async function getDrafts(filter: DraftFilter): Promise<Draft[]> {
         set props to props & "<<SEP>>CONTENT:" & content of theDraft
         set props to props & "<<SEP>>FLAGGED:" & flagged of theDraft
         set props to props & "<<SEP>>FOLDER:" & folder of theDraft
-        set props to props & "<<SEP>>TAGS:" & ((tags of theDraft) as string)
+        set props to props & "<<SEP>>TAGS:" & ((tag list of theDraft) as string)
+        set props to props & "<<SEP>>TAG_NAMES:" & tag names of theDraft
+        set props to props & "<<SEP>>QUERY_TAG_NAMES:" & query tag names of theDraft
         set props to props & "<<SEP>>CREATED:" & ((creation date of theDraft) as string)
         set props to props & "<<SEP>>MODIFIED:" & ((modification date of theDraft) as string)
         set props to props & "<<SEP>>ACCESSED:" & ((access date of theDraft) as string)
@@ -268,7 +283,7 @@ export async function createDraft(
   const script = `
     tell application "Drafts"
       set newDraft to make new draft with properties {content:"${escapedContent}"}
-      ${tags && tags.length > 0 ? `set tags of newDraft to ${tagList}` : ''}
+      ${tags && tags.length > 0 ? `set tag list of newDraft to ${tagList}` : ''}
       ${flagged ? `set flagged of newDraft to true` : ''}
       set theUUID to id of newDraft
       return theUUID
@@ -293,7 +308,9 @@ export async function getDraft(uuid: string): Promise<Draft | null> {
         set props to props & "<<SEP>>CONTENT:" & content of theDraft
         set props to props & "<<SEP>>FLAGGED:" & flagged of theDraft
         set props to props & "<<SEP>>FOLDER:" & folder of theDraft
-        set props to props & "<<SEP>>TAGS:" & ((tags of theDraft) as string)
+        set props to props & "<<SEP>>TAGS:" & ((tag list of theDraft) as string)
+        set props to props & "<<SEP>>TAG_NAMES:" & tag names of theDraft
+        set props to props & "<<SEP>>QUERY_TAG_NAMES:" & query tag names of theDraft
         set props to props & "<<SEP>>CREATED:" & ((creation date of theDraft) as string)
         set props to props & "<<SEP>>MODIFIED:" & ((modification date of theDraft) as string)
         set props to props & "<<SEP>>ACCESSED:" & ((access date of theDraft) as string)
@@ -353,8 +370,8 @@ export async function addTagsToDraft(uuid: string, tags: string[]): Promise<bool
     tell application "Drafts"
       try
         set targetDraft to draft id "${escapedUuid}"
-        set currentTags to tags of targetDraft
-        set tags of targetDraft to currentTags & ${tagList}
+        set currentTags to tag list of targetDraft
+        set tag list of targetDraft to currentTags & ${tagList}
         return "SUCCESS"
       on error errMsg
         return "ERROR: " & errMsg
@@ -409,8 +426,69 @@ export async function listActions(): Promise<Action[]> {
 
   const result = await executeAppleScript(script);
   const names = parseAppleScriptList(result);
-  
+
   return names.map(name => ({ name }));
+}
+
+/**
+ * List all tags
+ */
+export async function listTags(): Promise<Tag[]> {
+  const script = `
+    tell application "Drafts"
+      set tagList to {}
+      repeat with t in tags
+        set end of tagList to name of t
+      end repeat
+      return tagList
+    end tell
+  `;
+
+  const result = await executeAppleScript(script);
+  const names = parseAppleScriptList(result);
+
+  return names.map(name => ({ name }));
+}
+
+/**
+ * Get a tag with its drafts
+ */
+export async function getTag(tagName: string): Promise<Tag> {
+  const escapedTagName = escapeAppleScriptString(tagName);
+
+  const script = `
+    tell application "Drafts"
+      set t to tag "${escapedTagName}"
+      set draftList to drafts of t
+      set results to ""
+      repeat with d in draftList
+        set theDraft to contents of d
+        set props to "ID:" & id of theDraft
+        set props to props & "<<SEP>>TITLE:" & title of theDraft
+        set props to props & "<<SEP>>CONTENT:" & content of theDraft
+        set props to props & "<<SEP>>FLAGGED:" & flagged of theDraft
+        set props to props & "<<SEP>>FOLDER:" & folder of theDraft
+        set props to props & "<<SEP>>TAGS:" & ((tag list of theDraft) as string)
+        set props to props & "<<SEP>>TAG_NAMES:" & tag names of theDraft
+        set props to props & "<<SEP>>QUERY_TAG_NAMES:" & query tag names of theDraft
+        set props to props & "<<SEP>>CREATED:" & ((creation date of theDraft) as string)
+        set props to props & "<<SEP>>MODIFIED:" & ((modification date of theDraft) as string)
+        set props to props & "<<SEP>>ACCESSED:" & ((access date of theDraft) as string)
+        set props to props & "<<SEP>>PERMALINK:" & permalink of theDraft
+        set props to props & "<<SEP>>CREATION_LAT:" & creation latitude of theDraft
+        set props to props & "<<SEP>>CREATION_LON:" & creation longitude of theDraft
+        set props to props & "<<SEP>>MODIFICATION_LAT:" & modification latitude of theDraft
+        set props to props & "<<SEP>>MODIFICATION_LON:" & modification longitude of theDraft
+        set results to results & props & "<<END>>"
+      end repeat
+      return results
+    end tell
+  `;
+
+  const result = await executeAppleScript(script);
+  const drafts = parseDraftsList(result);
+
+  return { name: tagName, drafts };
 }
 
 /**
@@ -430,7 +508,9 @@ export async function searchDrafts(query: string): Promise<Draft[]> {
         set props to props & "<<SEP>>CONTENT:" & content of theDraft
         set props to props & "<<SEP>>FLAGGED:" & flagged of theDraft
         set props to props & "<<SEP>>FOLDER:" & folder of theDraft
-        set props to props & "<<SEP>>TAGS:" & ((tags of theDraft) as string)
+        set props to props & "<<SEP>>TAGS:" & ((tag list of theDraft) as string)
+        set props to props & "<<SEP>>TAG_NAMES:" & tag names of theDraft
+        set props to props & "<<SEP>>QUERY_TAG_NAMES:" & query tag names of theDraft
         set props to props & "<<SEP>>CREATED:" & ((creation date of theDraft) as string)
         set props to props & "<<SEP>>MODIFIED:" & ((modification date of theDraft) as string)
         set props to props & "<<SEP>>ACCESSED:" & ((access date of theDraft) as string)
@@ -591,6 +671,8 @@ function parseDraftProperties(propsStr: string): Draft {
     flagged: props['FLAGGED'] === 'true',
     folder: (props['FOLDER'] || 'inbox') as 'inbox' | 'archive' | 'trash',
     tags: props['TAGS'] ? props['TAGS'].split(', ').filter(t => t) : [],
+    tagNames: props['TAG_NAMES'] || '',
+    queryTagNames: props['QUERY_TAG_NAMES'] || '',
     creationDate: props['CREATED'] ? parseAppleScriptDate(props['CREATED']) : '',
     modificationDate: props['MODIFIED'] ? parseAppleScriptDate(props['MODIFIED']) : '',
     accessDate: props['ACCESSED'] ? parseAppleScriptDate(props['ACCESSED']) : '',

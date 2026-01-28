@@ -21,6 +21,28 @@ const TOOLS: Tool[] = [
     },
   },
   {
+    name: 'drafts_list_tags',
+    description: 'List all tags in Drafts',
+    inputSchema: {
+      type: 'object',
+      properties: {},
+    },
+  },
+  {
+    name: 'drafts_get_tag',
+    description: 'Get a tag and its associated drafts',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        name: {
+          type: 'string',
+          description: 'The name of the tag',
+        },
+      },
+      required: ['name'],
+    },
+  },
+  {
     name: 'drafts_get_current_workspace',
     description: 'Get the current workspace in Drafts',
     inputSchema: {
@@ -340,6 +362,31 @@ class DraftsMCPServer {
                 {
                   type: 'text',
                   text: JSON.stringify(workspaces, null, 2),
+                },
+              ],
+            };
+          }
+
+          case 'drafts_list_tags': {
+            const tags = await drafts.listTags();
+            return {
+              content: [
+                {
+                  type: 'text',
+                  text: JSON.stringify(tags, null, 2),
+                },
+              ],
+            };
+          }
+
+          case 'drafts_get_tag': {
+            const { name: tagName } = args as { name: string };
+            const tag = await drafts.getTag(tagName);
+            return {
+              content: [
+                {
+                  type: 'text',
+                  text: JSON.stringify(tag, null, 2),
                 },
               ],
             };
