@@ -23,6 +23,12 @@ For additional discussion of uses, see [the Drafts forum](https://forums.getdraf
 
 ### Quick Start (After Publishing to npm)
 
+You will need to have Node installed on your Mac so make the `npx` command available. If you do not already have Node installed, you can do so with [Homebrew](https://brew.sh) using:
+
+```bash
+brew install node
+```
+
 Once published, use with `npx` - no installation needed:
 
 ```bash
@@ -57,6 +63,12 @@ node dist/index.js
 ```
 
 ### Configuration for Claude Desktop
+
+You will need to have Node installed on your Mac so make the `npx` command available. If you do not already have Node installed, you can do so with [Homebrew](https://brew.sh) using:
+
+```bash
+brew install node
+```
 
 **After publishing to npm**, add to your Claude Desktop config file (`~/Library/Application Support/Claude/claude_desktop_config.json`):
 
