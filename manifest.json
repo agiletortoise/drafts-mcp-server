@@ -1,0 +1,117 @@
+{
+  "manifest_version": "0.3",
+  "name": "drafts-mcp-server",
+  "display_name": "Drafts",
+  "version": "1.0.3",
+  "description": "MCP server for interacting with the Drafts app on macOS",
+  "long_description": "A Model Context Protocol (MCP) server that enables AI assistants to interact with the Drafts app on macOS through AppleScript. Manage drafts, workspaces, tags, and run actions programmatically.",
+  "author": {
+    "name": "Agile Tortoise",
+    "url": "https://getdrafts.com",
+    "email": "support@getdrafts.com"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/agiletortoise/drafts-mcp-server.git"
+  },
+  "homepage": "https://getdrafts.com",
+  "documentation": "https://github.com/agiletortoise/drafts-mcp-server#readme",
+  "support": "https://github.com/agiletortoise/drafts-mcp-server/issues",
+  "keywords": ["drafts", "notes", "writing", "macos", "applescript", "productivity"],
+  "license": "MIT",
+  "icon": "assets/icon.png",
+  "privacy_policies": ["https://getdrafts.com/support/privacy"],
+  "server": {
+    "type": "node",
+    "entry_point": "dist/index.js",
+    "mcp_config": {
+      "command": "node",
+      "args": ["${__dirname}/dist/index.js"]
+    }
+  },
+  "tools": [
+    {
+      "name": "drafts_list_workspaces",
+      "description": "List all workspaces in Drafts"
+    },
+    {
+      "name": "drafts_list_tags",
+      "description": "List all tags in Drafts"
+    },
+    {
+      "name": "drafts_get_tag",
+      "description": "Get a tag and its associated drafts"
+    },
+    {
+      "name": "drafts_get_current_workspace",
+      "description": "Get the current workspace in Drafts"
+    },
+    {
+      "name": "drafts_get_current",
+      "description": "Get the current draft open in Drafts"
+    },
+    {
+      "name": "drafts_get_workspace_drafts",
+      "description": "Get drafts from a specific workspace, optionally filtered by folder"
+    },
+    {
+      "name": "drafts_get_drafts",
+      "description": "Get drafts with flexible filtering by content, folder, tag, flagged status, and dates"
+    },
+    {
+      "name": "drafts_create_draft",
+      "description": "Create a new draft with content and optional tags"
+    },
+    {
+      "name": "drafts_get_draft",
+      "description": "Get a specific draft by its UUID"
+    },
+    {
+      "name": "drafts_update_draft",
+      "description": "Update the content of an existing draft"
+    },
+    {
+      "name": "drafts_add_tags",
+      "description": "Add tags to an existing draft"
+    },
+    {
+      "name": "drafts_search",
+      "description": "Search for drafts using a query string"
+    },
+    {
+      "name": "drafts_run_action",
+      "description": "Run a Drafts action on a specific draft"
+    },
+    {
+      "name": "drafts_list_actions",
+      "description": "List all available actions in Drafts"
+    },
+    {
+      "name": "drafts_flag",
+      "description": "Flag or unflag a draft"
+    },
+    {
+      "name": "drafts_archive",
+      "description": "Archive a draft"
+    },
+    {
+      "name": "drafts_inbox",
+      "description": "Move a draft to inbox"
+    },
+    {
+      "name": "drafts_trash",
+      "description": "Move a draft to trash"
+    },
+    {
+      "name": "drafts_open",
+      "description": "Open a draft in the Drafts editor"
+    }
+  ],
+  "tools_generated": false,
+  "compatibility": {
+    "platforms": ["darwin"],
+    "runtimes": {
+      "node": ">=18.0.0"
+    }
+  }
+}

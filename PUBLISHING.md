@@ -259,9 +259,171 @@ Only works within 72 hours of publication:
 npm unpublish @agiletortoise/drafts-mcp-server@1.0.0
 ```
 
+## Packaging as MCPB for Claude Desktop Directory
+
+MCPB (MCP Bundle) is the package format for submitting MCP servers to the Claude Desktop extension directory.
+
+### Prerequisites
+
+- Completed npm publishing steps above
+- `manifest.json` with all required fields
+- Icon file at `assets/icon.png`
+- Privacy policy URL publicly accessible
+
+### Install the MCPB CLI
+
+Anthropic provides an official CLI tool for creating MCPB packages:
+
+```bash
+npm install -g @anthropic-ai/mcpb
+```
+
+### Package Structure
+
+The MCPB package will contain:
+
+```
+drafts-mcp-server.mcpb (zip archive)
+├── manifest.json          # Package metadata and tool definitions
+├── assets/
+│   └── icon.png          # Extension icon (recommended: 128x128)
+├── dist/
+│   └── index.js          # Compiled server entry point
+├── package.json          # Node.js dependencies
+└── node_modules/         # Dependencies (bundled automatically)
+```
+
+### Creating the MCPB Package
+
+1. **Ensure the project is built**
+
+   ```bash
+   npm install
+   npm run build
+   ```
+
+2. **Initialize manifest (if not already created)**
+
+   If you don't have a `manifest.json`, the CLI can create one interactively:
+
+   ```bash
+   mcpb init
+   ```
+
+   This project already has a `manifest.json`, so skip this step.
+
+3. **Verify manifest.json**
+
+   Ensure `manifest.json` includes:
+   - `manifest_version`: "0.3" or higher
+   - `name`, `version`, `description`
+   - `author` with name and contact info
+   - `server` configuration with entry point
+   - `tools` array listing all tools
+   - `icon` path to PNG icon
+   - `privacy_policies` array with HTTPS URLs
+   - `compatibility` specifying platforms (darwin for macOS)
+
+4. **Create the MCPB bundle**
+
+   ```bash
+   mcpb pack
+   ```
+
+   This creates a `.mcpb` file (e.g., `drafts-mcp-server-1.0.3.mcpb`) containing all necessary files.
+
+### Manual Packaging (Alternative)
+
+If you prefer not to use the CLI, you can create the bundle manually:
+
+```bash
+zip -r drafts-mcp-server-1.0.3.mcpb \
+  manifest.json \
+  package.json \
+  assets/ \
+  dist/ \
+  node_modules/ \
+  LICENSE \
+  README.md
+```
+
+### Tool Annotations (Required for Directory)
+
+Every tool must have safety annotations in `src/index.ts`:
+
+```typescript
+{
+  name: 'drafts_get_draft',
+  description: 'Get a specific draft by its UUID',
+  inputSchema: { ... },
+  annotations: {
+    title: 'Get Draft',
+    readOnlyHint: true,      // true if tool doesn't modify data
+    destructiveHint: false,  // true if tool can destroy data
+    idempotentHint: true,    // true if repeated calls have no additional effect
+    openWorldHint: false,    // true if tool interacts with external services
+  },
+}
+```
+
+Annotation guidelines:
+- **readOnlyHint**: `true` for list/get/search operations
+- **destructiveHint**: `true` for update/delete/trash operations
+- **idempotentHint**: `true` if calling again with same args has no additional effect
+- **openWorldHint**: `true` if the tool may interact with external services
+
+### Submitting to Claude Desktop Directory
+
+1. **Review submission requirements**
+
+   See: https://support.claude.com/en/articles/12922832-local-mcp-server-submission-guide
+
+2. **Pre-submission checklist**
+
+   - [ ] manifest.json follows v0.3 spec
+   - [ ] All tools have accurate safety annotations
+   - [ ] Privacy policy URL is publicly accessible
+   - [ ] Icon is included and displays correctly
+   - [ ] Server works with Claude Desktop locally
+   - [ ] Documentation is complete
+
+3. **Submit for review**
+
+   Follow the submission process in the Claude Help Center article above.
+
+### Testing the MCPB Locally
+
+Before submitting, test the package locally:
+
+1. **Extract and verify contents**
+
+   ```bash
+   unzip -l drafts-mcp-server-1.0.3.mcpb
+   ```
+
+2. **Test installation**
+
+   ```bash
+   mkdir test-install && cd test-install
+   unzip ../drafts-mcp-server-1.0.3.mcpb
+   npm install  # if node_modules not included
+   node dist/index.js
+   ```
+
+3. **Verify manifest**
+
+   Check that all fields are present and valid JSON:
+
+   ```bash
+   cat manifest.json | jq .
+   ```
+
 ## Resources
 
 - [npm Documentation](https://docs.npmjs.com/)
 - [Semantic Versioning](https://semver.org/)
 - [MCP Documentation](https://modelcontextprotocol.io/)
+- [MCP Tools Specification](https://modelcontextprotocol.io/docs/concepts/tools)
+- [MCPB Manifest Specification](https://github.com/anthropics/mcpb/blob/main/MANIFEST.md)
+- [Local MCP Server Submission Guide](https://support.claude.com/en/articles/12922832-local-mcp-server-submission-guide)
 - [TypeScript Handbook](https://www.typescriptlang.org/docs/)
