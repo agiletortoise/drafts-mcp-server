@@ -16,7 +16,7 @@ For additional discussion of uses, see [the Drafts forum](https://forums.getdraf
 ## Requirements
 
 - macOS (AppleScript is macOS-only)
-- [Drafts](https://getdrafts.com) app v50.0.2 or greater installed
+- [Drafts](https://getdrafts.com) app v50.0.3 or greater installed
 - Node.js 18 or higher
 
 ## Installation

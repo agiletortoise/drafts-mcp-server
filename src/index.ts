@@ -19,6 +19,11 @@ const TOOLS: Tool[] = [
       type: 'object',
       properties: {},
     },
+    annotations: {
+      title: 'List Workspaces',
+      readOnlyHint: true,
+      openWorldHint: false,
+    },
   },
   {
     name: 'drafts_list_tags',
@@ -26,6 +31,11 @@ const TOOLS: Tool[] = [
     inputSchema: {
       type: 'object',
       properties: {},
+    },
+    annotations: {
+      title: 'List Tags',
+      readOnlyHint: true,
+      openWorldHint: false,
     },
   },
   {
@@ -41,6 +51,11 @@ const TOOLS: Tool[] = [
       },
       required: ['name'],
     },
+    annotations: {
+      title: 'Get Tag',
+      readOnlyHint: true,
+      openWorldHint: false,
+    },
   },
   {
     name: 'drafts_get_current_workspace',
@@ -49,6 +64,11 @@ const TOOLS: Tool[] = [
       type: 'object',
       properties: {},
     },
+    annotations: {
+      title: 'Get Current Workspace',
+      readOnlyHint: true,
+      openWorldHint: false,
+    },
   },
   {
     name: 'drafts_get_current',
@@ -56,6 +76,11 @@ const TOOLS: Tool[] = [
     inputSchema: {
       type: 'object',
       properties: {},
+    },
+    annotations: {
+      title: 'Get Current Draft',
+      readOnlyHint: true,
+      openWorldHint: false,
     },
   },
   {
@@ -75,6 +100,11 @@ const TOOLS: Tool[] = [
         },
       },
       required: ['workspaceName'],
+    },
+    annotations: {
+      title: 'Get Workspace Drafts',
+      readOnlyHint: true,
+      openWorldHint: false,
     },
   },
   {
@@ -118,6 +148,11 @@ const TOOLS: Tool[] = [
         },
       },
     },
+    annotations: {
+      title: 'Get Drafts',
+      readOnlyHint: true,
+      openWorldHint: false,
+    },
   },
   {
     name: 'drafts_create_draft',
@@ -141,6 +176,13 @@ const TOOLS: Tool[] = [
       },
       required: ['content'],
     },
+    annotations: {
+      title: 'Create Draft',
+      readOnlyHint: false,
+      destructiveHint: false,
+      idempotentHint: false,
+      openWorldHint: false,
+    },
   },
   {
     name: 'drafts_get_draft',
@@ -154,6 +196,11 @@ const TOOLS: Tool[] = [
         },
       },
       required: ['uuid'],
+    },
+    annotations: {
+      title: 'Get Draft',
+      readOnlyHint: true,
+      openWorldHint: false,
     },
   },
   {
@@ -172,6 +219,13 @@ const TOOLS: Tool[] = [
         },
       },
       required: ['uuid', 'content'],
+    },
+    annotations: {
+      title: 'Update Draft',
+      readOnlyHint: false,
+      destructiveHint: true,
+      idempotentHint: true,
+      openWorldHint: false,
     },
   },
   {
@@ -192,6 +246,13 @@ const TOOLS: Tool[] = [
       },
       required: ['uuid', 'tags'],
     },
+    annotations: {
+      title: 'Add Tags',
+      readOnlyHint: false,
+      destructiveHint: false,
+      idempotentHint: true,
+      openWorldHint: false,
+    },
   },
   {
     name: 'drafts_search',
@@ -205,6 +266,11 @@ const TOOLS: Tool[] = [
         },
       },
       required: ['query'],
+    },
+    annotations: {
+      title: 'Search Drafts',
+      readOnlyHint: true,
+      openWorldHint: false,
     },
   },
   {
@@ -224,6 +290,13 @@ const TOOLS: Tool[] = [
       },
       required: ['draftUuid', 'actionName'],
     },
+    annotations: {
+      title: 'Run Action',
+      readOnlyHint: false,
+      destructiveHint: true,
+      idempotentHint: false,
+      openWorldHint: true,
+    },
   },
   {
     name: 'drafts_list_actions',
@@ -231,6 +304,11 @@ const TOOLS: Tool[] = [
     inputSchema: {
       type: 'object',
       properties: {},
+    },
+    annotations: {
+      title: 'List Actions',
+      readOnlyHint: true,
+      openWorldHint: false,
     },
   },
   {
@@ -250,6 +328,13 @@ const TOOLS: Tool[] = [
       },
       required: ['uuid', 'flagged'],
     },
+    annotations: {
+      title: 'Flag Draft',
+      readOnlyHint: false,
+      destructiveHint: false,
+      idempotentHint: true,
+      openWorldHint: false,
+    },
   },
   {
     name: 'drafts_archive',
@@ -263,6 +348,13 @@ const TOOLS: Tool[] = [
         },
       },
       required: ['uuid'],
+    },
+    annotations: {
+      title: 'Archive Draft',
+      readOnlyHint: false,
+      destructiveHint: false,
+      idempotentHint: true,
+      openWorldHint: false,
     },
   },
   {
@@ -278,6 +370,13 @@ const TOOLS: Tool[] = [
       },
       required: ['uuid'],
     },
+    annotations: {
+      title: 'Move to Inbox',
+      readOnlyHint: false,
+      destructiveHint: false,
+      idempotentHint: true,
+      openWorldHint: false,
+    },
   },
   {
     name: 'drafts_trash',
@@ -292,6 +391,13 @@ const TOOLS: Tool[] = [
       },
       required: ['uuid'],
     },
+    annotations: {
+      title: 'Trash Draft',
+      readOnlyHint: false,
+      destructiveHint: true,
+      idempotentHint: true,
+      openWorldHint: false,
+    },
   },
   {
     name: 'drafts_open',
@@ -305,6 +411,11 @@ const TOOLS: Tool[] = [
         },
       },
       required: ['uuid'],
+    },
+    annotations: {
+      title: 'Open Draft',
+      readOnlyHint: true,
+      openWorldHint: false,
     },
   },
 ];
