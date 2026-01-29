@@ -64,13 +64,27 @@ node dist/index.js
 
 ### Configuration for Claude Desktop
 
+The easiest way to use this MCP with the Claude Desktop app by installing the MCPB version. To do so:
+
+* Download the [drafts-mcp-server.mcpb](https://github.com/agiletortoise/drafts-mcp-server/blob/main/drafts-mcp-server.mcpb?raw=true) from the project to your Mac.
+* Open Claude Desktop
+* Navigate to `Settings > Extensions`
+* Drag and drop the drafts-mcp-server.mcpb file from the Finder into this window to install.
+* Follow the prompts to complete installation.
+
+We are likely to submit this project to the Claude extension directory soon to make it available directly in the app.
+
+#### Advanced Claude Desktop Configuration
+
+If you prefer to install locally, or run via `npm`, these instructions are for you...
+
 You will need to have Node installed on your Mac so make the `npx` command available. If you do not already have Node installed, you can do so with [Homebrew](https://brew.sh) using:
 
 ```bash
 brew install node
 ```
 
-**After publishing to npm**, add to your Claude Desktop config file (`~/Library/Application Support/Claude/claude_desktop_config.json`):
+Add the below to the Claude Desktop confguration file (`~/Library/Application Support/Claude/claude_desktop_config.json`), and relaunch Claude.
 
 ```json
 {

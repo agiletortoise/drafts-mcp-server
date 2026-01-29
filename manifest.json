@@ -7,7 +7,7 @@
   "long_description": "A Model Context Protocol (MCP) server that enables AI assistants to interact with the Drafts app on macOS through AppleScript. Manage drafts, workspaces, tags, and run actions programmatically.",
   "author": {
     "name": "Agile Tortoise",
-    "url": "https://getdrafts.com",
+    "url": "https://github.com/agiletortoise",
     "email": "support@getdrafts.com"
   },
   "repository": {
