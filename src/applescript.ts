@@ -1,5 +1,21 @@
 import { spawn } from 'child_process';
 
+/**
+ * Verbose logging utility
+ */
+const VERBOSE = process.env.MCP_VERBOSE === 'true' || process.argv.includes('--verbose');
+
+function log(message: string, data?: unknown): void {
+  if (VERBOSE) {
+    const timestamp = new Date().toISOString();
+    if (data !== undefined) {
+      console.error(`[${timestamp}] ${message}`, JSON.stringify(data, null, 2));
+    } else {
+      console.error(`[${timestamp}] ${message}`);
+    }
+  }
+}
+
 export interface AppleScriptError extends Error {
   code?: number;
   stderr?: string;
@@ -9,7 +25,10 @@ export interface AppleScriptError extends Error {
  * Execute AppleScript code and return the result
  */
 export async function executeAppleScript(script: string): Promise<string> {
+  log('Executing AppleScript', { script: script.trim() });
+  
   return new Promise((resolve, reject) => {
+    const startTime = Date.now();
     const child = spawn('osascript', ['-']);
 
     let stdout = '';
@@ -24,21 +43,28 @@ export async function executeAppleScript(script: string): Promise<string> {
     });
 
     child.on('close', (code) => {
+      const duration = Date.now() - startTime;
+      
       if (stderr) {
         console.error('AppleScript stderr:', stderr);
+        log('AppleScript stderr output', { stderr });
       }
 
       if (code !== 0) {
+        log('AppleScript execution failed', { code, stderr, duration: `${duration}ms` });
         const error = new Error(`AppleScript execution failed: ${stderr || 'unknown error'}`) as AppleScriptError;
         error.code = code ?? undefined;
         error.stderr = stderr;
         reject(error);
       } else {
-        resolve(stdout.trim());
+        const result = stdout.trim();
+        log('AppleScript execution successful', { result, duration: `${duration}ms` });
+        resolve(result);
       }
     });
 
     child.on('error', (err) => {
+      log('Failed to spawn osascript', { error: err.message });
       reject(new Error(`Failed to spawn osascript: ${err.message}`));
     });
 
@@ -51,7 +77,10 @@ export async function executeAppleScript(script: string): Promise<string> {
  * Execute compiled AppleScript (.scpt) file
  */
 export async function executeCompiledScript(scriptPath: string, args: string[] = []): Promise<string> {
+  log('Executing compiled AppleScript', { scriptPath, args });
+  
   return new Promise((resolve, reject) => {
+    const startTime = Date.now();
     const child = spawn('osascript', [scriptPath, ...args]);
 
     let stdout = '';
@@ -66,17 +95,23 @@ export async function executeCompiledScript(scriptPath: string, args: string[] =
     });
 
     child.on('close', (code) => {
+      const duration = Date.now() - startTime;
+      
       if (stderr) {
         console.error('Compiled script stderr:', stderr);
+        log('Compiled script stderr output', { stderr });
       }
 
       if (code !== 0) {
+        log('Compiled script execution failed', { code, stderr, duration: `${duration}ms` });
         const error = new Error(`Compiled script execution failed: ${stderr || 'unknown error'}`) as AppleScriptError;
         error.code = code ?? undefined;
         error.stderr = stderr;
         reject(error);
       } else {
-        resolve(stdout.trim());
+        const result = stdout.trim();
+        log('Compiled script execution successful', { result, duration: `${duration}ms` });
+        resolve(result);
       }
     });
 

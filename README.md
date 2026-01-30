@@ -281,6 +281,7 @@ Verbose logging output includes:
 - Session creation and destruction (both Streamable HTTP and SSE)
 - HTTP request details (method, URL, headers, POST bodies)
 - HTTP response status codes, content types, and response sizes
+- **AppleScript execution** (scripts sent to Drafts, results received, execution time)
 - Error messages with full context
 - Request body parsing (empty, malformed, or valid JSON)
 
@@ -293,8 +294,10 @@ Example output:
 [2026-01-30T10:15:25.456Z] Initialize request detected, creating new streamable HTTP session
 [2026-01-30T10:15:25.567Z] Streamable HTTP session initialized: a1b2c3d4-e5f6-47a8-b9c0-d1e2f3a4b5c6
 [2026-01-30T10:15:25.678Z] Handling request with session a1b2c3d4-e5f6-47a8-b9c0-d1e2f3a4b5c6, method: POST
-[2026-01-30T10:15:25.789Z] Response sent: status=200, contentType=text/event-stream, size=1024 bytes
-[2026-01-30T10:15:25.890Z] HTTP server started on 127.0.0.1:3000
+[2026-01-30T10:15:25.789Z] Executing AppleScript {"script":"tell application \\"Drafts\\"\\n..."}
+[2026-01-30T10:15:25.890Z] AppleScript execution successful {"result":"Inbox, Archive, ...", "duration":"101ms"}
+[2026-01-30T10:15:25.901Z] Response sent: status=200, contentType=text/event-stream, size=1024 bytes
+[2026-01-30T10:15:26.012Z] HTTP server started on 127.0.0.1:3000
 ```
 
 ## Available Tools
