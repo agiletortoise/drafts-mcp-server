@@ -1,9 +1,19 @@
 #!/usr/bin/env node
 
+import { randomUUID } from 'node:crypto';
+import {
+  createServer,
+  IncomingMessage,
+  Server as HttpServer,
+  ServerResponse,
+} from 'node:http';
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
+import { SSEServerTransport } from '@modelcontextprotocol/sdk/server/sse.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
+import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import {
   CallToolRequestSchema,
+  isInitializeRequest,
   ListToolsRequestSchema,
   Tool,
 } from '@modelcontextprotocol/sdk/types.js';
@@ -421,47 +431,67 @@ const TOOLS: Tool[] = [
 ];
 
 /**
+ * Verbose logging utility
+ */
+const VERBOSE = process.env.MCP_VERBOSE === 'true' || process.argv.includes('--verbose');
+
+function log(message: string, data?: unknown): void {
+  if (VERBOSE) {
+    const timestamp = new Date().toISOString();
+    if (data !== undefined) {
+      console.error(`[${timestamp}] ${message}`, JSON.stringify(data, null, 2));
+    } else {
+      console.error(`[${timestamp}] ${message}`);
+    }
+  }
+}
+
+/**
  * Main server class
  */
+type StreamableSession = {
+  transport: StreamableHTTPServerTransport;
+  server: Server;
+};
+
+type SseSession = {
+  transport: SSEServerTransport;
+  server: Server;
+};
+
 class DraftsMCPServer {
-  private server: Server;
+  private httpServer?: HttpServer;
+  private streamableSessions = new Map<string, StreamableSession>();
+  private sseSessions = new Map<string, SseSession>();
+  private useJsonResponse = false;
 
   constructor() {
-    this.server = new Server(
-      {
-        name: 'drafts-mcp-server',
-        version: '1.0.0',
-      },
-      {
-        capabilities: {
-          tools: {},
-        },
-      }
-    );
-
-    this.setupHandlers();
-    this.setupErrorHandling();
+    this.setupProcessHandlers();
   }
 
-  private setupErrorHandling(): void {
-    this.server.onerror = (error) => {
-      console.error('[MCP Error]', error);
-    };
-
+  private setupProcessHandlers(): void {
     process.on('SIGINT', async () => {
-      await this.server.close();
+      log('Received SIGINT, closing all sessions');
+      await this.closeAllSessions();
       process.exit(0);
     });
   }
 
-  private setupHandlers(): void {
+  private setupErrorHandling(server: Server): void {
+    server.onerror = (error) => {
+      console.error('[MCP Error]', error);
+      log('Server error occurred', { error: error instanceof Error ? error.message : String(error) });
+    };
+  }
+
+  private setupHandlers(server: Server): void {
     // List available tools
-    this.server.setRequestHandler(ListToolsRequestSchema, async () => ({
+    server.setRequestHandler(ListToolsRequestSchema, async () => ({
       tools: TOOLS,
     }));
 
     // Handle tool calls
-    this.server.setRequestHandler(CallToolRequestSchema, async (request) => {
+    server.setRequestHandler(CallToolRequestSchema, async (request) => {
       const { name, arguments: args } = request.params;
 
       try {
@@ -766,12 +796,305 @@ class DraftsMCPServer {
     });
   }
 
+  private createServerInstance(): Server {
+    log('Creating new MCP server instance');
+    const server = new Server(
+      {
+        name: 'drafts-mcp-server',
+        version: '1.0.0',
+      },
+      {
+        capabilities: {
+          tools: {},
+        },
+      }
+    );
+
+    this.setupHandlers(server);
+    this.setupErrorHandling(server);
+    return server;
+  }
+
+  private async closeAllSessions(): Promise<void> {
+    log(`Closing ${this.streamableSessions.size} streamable HTTP sessions`);
+    for (const session of this.streamableSessions.values()) {
+      await session.transport.close();
+      await session.server.close();
+    }
+    this.streamableSessions.clear();
+
+    log(`Closing ${this.sseSessions.size} SSE sessions`);
+    for (const session of this.sseSessions.values()) {
+      await session.transport.close();
+      await session.server.close();
+    }
+    this.sseSessions.clear();
+
+    if (this.httpServer) {
+      log('Closing HTTP server');
+      await new Promise<void>((resolve) => this.httpServer?.close(() => resolve()));
+    }
+  }
+
+  private ensureAcceptHeader(req: IncomingMessage, value: string): void {
+    if (!req.headers.accept) {
+      req.headers.accept = value;
+    }
+  }
+
+  private getHeaderValue(req: IncomingMessage, name: string): string | undefined {
+    const value = req.headers[name.toLowerCase()];
+    return Array.isArray(value) ? value[0] : value;
+  }
+
+  private async readJsonBody(req: IncomingMessage): Promise<unknown | undefined> {
+    const chunks: Buffer[] = [];
+    for await (const chunk of req) {
+      chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+    }
+
+    if (chunks.length === 0) {
+      log('Received empty request body');
+      return undefined;
+    }
+
+    const raw = Buffer.concat(chunks).toString('utf8').trim();
+    if (!raw) {
+      log('Received empty request body (whitespace only)');
+      return undefined;
+    }
+
+    const parsed = JSON.parse(raw);
+    log('POST body received', parsed);
+    return parsed;
+  }
+
+  private sendJsonError(res: ServerResponse, status: number, message: string): void {
+    if (res.headersSent) {
+      return;
+    }
+    const responseBody = {
+      jsonrpc: '2.0',
+      error: { code: -32000, message },
+      id: null,
+    };
+    log('Sending JSON error response', { status, body: responseBody });
+    res.statusCode = status;
+    res.setHeader('Content-Type', 'application/json');
+    res.end(JSON.stringify(responseBody));
+  }
+
+  private async handleStreamableHttp(req: IncomingMessage, res: ServerResponse): Promise<void> {
+    log(`Streamable HTTP ${req.method} request`, { url: req.url, headers: req.headers });
+    
+    if (req.method === 'GET') {
+      this.ensureAcceptHeader(req, 'text/event-stream');
+    } else if (req.method === 'POST') {
+      this.ensureAcceptHeader(req, 'application/json, text/event-stream');
+    }
+
+    const sessionId = this.getHeaderValue(req, 'mcp-session-id');
+    let session = sessionId ? this.streamableSessions.get(sessionId) : undefined;
+    log(`Session lookup: ${sessionId ? sessionId : 'no session ID'}, found: ${session ? 'yes' : 'no'}`);
+    let parsedBody: unknown | undefined;
+
+    if (req.method === 'POST') {
+      try {
+        parsedBody = await this.readJsonBody(req);
+        if (parsedBody) {
+          log(`POST body processed`);
+        }
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        this.sendJsonError(res, 400, `Parse error: ${errorMessage}`);
+        return;
+      }
+
+      if (!session && parsedBody !== undefined) {
+        const messages = Array.isArray(parsedBody) ? parsedBody : [parsedBody];
+        const isInit = messages.some((message) => isInitializeRequest(message));
+
+        if (isInit) {
+          log('Initialize request detected, creating new streamable HTTP session');
+          const server = this.createServerInstance();
+          const transport = new StreamableHTTPServerTransport({
+            sessionIdGenerator: () => randomUUID(),
+            enableJsonResponse: this.useJsonResponse,
+            onsessioninitialized: (newSessionId) => {
+              log(`Streamable HTTP session initialized: ${newSessionId}`);
+              this.streamableSessions.set(newSessionId, { transport, server });
+            },
+          });
+
+          transport.onclose = () => {
+            const activeSessionId = transport.sessionId;
+            if (activeSessionId) {
+              log(`Streamable HTTP session closed: ${activeSessionId}`);
+              this.streamableSessions.delete(activeSessionId);
+            }
+            server.close();
+          };
+
+          await server.connect(transport);
+          session = { transport, server };
+        }
+      }
+    }
+
+    if (!session) {
+      this.sendJsonError(res, 400, 'Bad Request: No valid session ID provided');
+      return;
+    }
+
+    log(`Handling request with session ${sessionId || 'new'}, method: ${req.method}`);
+    const originalWrite = res.write.bind(res);
+    const originalEnd = res.end.bind(res);
+    let responseSize = 0;
+
+    res.write = function(chunk?: unknown, encoding?: unknown, callback?: unknown) {
+      if (chunk) {
+        responseSize += Buffer.isBuffer(chunk) ? chunk.length : String(chunk).length;
+      }
+      return originalWrite(chunk as any, encoding as any, callback as any);
+    } as any;
+
+    res.end = function(chunk?: unknown, encoding?: unknown, callback?: unknown) {
+      log(`Response sent: status=${res.statusCode}, contentType=${res.getHeader('content-type')}, size=${responseSize} bytes`);
+      return originalEnd(chunk as any, encoding as any, callback as any);
+    } as any;
+
+    await session.transport.handleRequest(req, res, parsedBody);
+  }
+
+  private async handleSse(req: IncomingMessage, res: ServerResponse): Promise<void> {
+    log(`SSE ${req.method} request`, { url: req.url, headers: req.headers });
+    const url = new URL(req.url ?? '', `http://${req.headers.host ?? 'localhost'}`);
+
+    if (url.pathname === '/sse' && req.method === 'GET') {
+      log('SSE connection request, creating new SSE session');
+      const transport = new SSEServerTransport('/messages', res);
+      const server = this.createServerInstance();
+      log(`SSE session created: ${transport.sessionId}`);
+      this.sseSessions.set(transport.sessionId, { transport, server });
+
+      transport.onclose = () => {
+        log(`SSE session closed: ${transport.sessionId}`);
+        this.sseSessions.delete(transport.sessionId);
+        server.close();
+      };
+
+      await server.connect(transport);
+      return;
+    }
+
+    if (url.pathname === '/messages' && req.method === 'POST') {
+      const sessionId = url.searchParams.get('sessionId') ?? undefined;
+      const session = sessionId ? this.sseSessions.get(sessionId) : undefined;
+      log(`SSE POST /messages request for session: ${sessionId || 'unknown'}`);
+
+      if (!session) {
+        this.sendJsonError(res, 400, 'Bad Request: No valid session ID provided');
+        return;
+      }
+
+      let parsedBody: unknown | undefined;
+      try {
+        parsedBody = await this.readJsonBody(req);
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        this.sendJsonError(res, 400, `Parse error: ${errorMessage}`);
+        return;
+      }
+
+      const originalEnd = res.end.bind(res);
+      res.end = function(chunk?: unknown, encoding?: unknown, callback?: unknown) {
+        log(`SSE POST response sent: status=${res.statusCode}`);
+        return originalEnd(chunk as any, encoding as any, callback as any);
+      } as any;
+
+      await session.transport.handlePostMessage(req, res, parsedBody);
+      return;
+    }
+  }
+
   async run(): Promise<void> {
+    const transport = process.env.MCP_TRANSPORT?.toLowerCase() ?? 'http';
+
+    if (transport === 'stdio') {
+      await this.runStdio();
+      return;
+    }
+
+    await this.runHttp();
+  }
+
+  private async runStdio(): Promise<void> {
+    log('Starting STDIO transport mode');
+    const server = this.createServerInstance();
     const transport = new StdioServerTransport();
-    await this.server.connect(transport);
+    await server.connect(transport);
     console.error('Drafts MCP Server running on stdio');
+    log('STDIO transport connected');
+  }
+
+  private async runHttp(): Promise<void> {
+    const port = Number.parseInt(process.env.MCP_HTTP_PORT ?? '3000', 10);
+    const host = process.env.MCP_HTTP_HOST ?? '127.0.0.1';
+    const streamablePath = process.env.MCP_HTTP_PATH ?? '/mcp';
+    this.useJsonResponse = process.env.MCP_JSON_RESPONSE === 'true' || process.argv.includes('--json-response');
+    log('Starting HTTP transport mode', { host, port, streamablePath, useJsonResponse: this.useJsonResponse });
+
+    this.httpServer = createServer(async (req, res) => {
+      try {
+        if (!req.url) {
+          res.statusCode = 400;
+          res.end('Missing request URL');
+          return;
+        }
+
+        const url = new URL(req.url, `http://${req.headers.host ?? 'localhost'}`);
+        if (url.pathname === streamablePath) {
+          await this.handleStreamableHttp(req, res);
+          return;
+        }
+
+        if (url.pathname === '/sse' || url.pathname === '/messages') {
+          await this.handleSse(req, res);
+          return;
+        }
+
+        res.statusCode = 404;
+        res.end('Not found');
+      } catch (error) {
+        console.error('[MCP HTTP Error]', error);
+        if (!res.headersSent) {
+          res.statusCode = 500;
+          res.end('Internal server error');
+        }
+      }
+    });
+
+    await new Promise<void>((resolve, reject) => {
+      this.httpServer?.listen(port, host, (error?: Error) => {
+        if (error) {
+          reject(error);
+          return;
+        }
+        resolve();
+      });
+    });
+
+    log(`HTTP server started on ${host}:${port}`);
+    const modeInfo = this.useJsonResponse ? '(JSON responses for clients like LM Studio)' : '(SSE streaming)';
+    console.error(
+      `Drafts MCP Server listening on http://${host}:${port}${streamablePath} (Streamable HTTP ${modeInfo}) and /sse + /messages (SSE fallback)`
+    );
   }
 }
+
+// Environment variable to switch transports:
+// - MCP_TRANSPORT=stdio (for STDIO mode, default for Claude Desktop)
+// - MCP_TRANSPORT=http (for HTTP modes, default)
 
 // Start the server
 const server = new DraftsMCPServer();
