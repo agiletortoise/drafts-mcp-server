@@ -464,6 +464,7 @@ class DraftsMCPServer {
   private streamableSessions = new Map<string, StreamableSession>();
   private sseSessions = new Map<string, SseSession>();
   private useJsonResponse = false;
+  private isClosing = false;
 
   constructor() {
     this.setupProcessHandlers();
@@ -816,23 +817,50 @@ class DraftsMCPServer {
   }
 
   private async closeAllSessions(): Promise<void> {
-    log(`Closing ${this.streamableSessions.size} streamable HTTP sessions`);
-    for (const session of this.streamableSessions.values()) {
-      await session.transport.close();
-      await session.server.close();
+    if (this.isClosing) {
+      return; // Prevent re-entrant calls
     }
+    this.isClosing = true;
+
+    log(`Closing ${this.streamableSessions.size} streamable HTTP sessions`);
+    const streamableSessions = Array.from(this.streamableSessions.values());
     this.streamableSessions.clear();
+    for (const session of streamableSessions) {
+      try {
+        await session.transport.close();
+      } catch (error) {
+        log('Error closing streamable transport', error);
+      }
+      try {
+        await session.server.close();
+      } catch (error) {
+        log('Error closing streamable server', error);
+      }
+    }
 
     log(`Closing ${this.sseSessions.size} SSE sessions`);
-    for (const session of this.sseSessions.values()) {
-      await session.transport.close();
-      await session.server.close();
-    }
+    const sseSessions = Array.from(this.sseSessions.values());
     this.sseSessions.clear();
+    for (const session of sseSessions) {
+      try {
+        await session.transport.close();
+      } catch (error) {
+        log('Error closing SSE transport', error);
+      }
+      try {
+        await session.server.close();
+      } catch (error) {
+        log('Error closing SSE server', error);
+      }
+    }
 
     if (this.httpServer) {
       log('Closing HTTP server');
-      await new Promise<void>((resolve) => this.httpServer?.close(() => resolve()));
+      try {
+        await new Promise<void>((resolve) => this.httpServer?.close(() => resolve()));
+      } catch (error) {
+        log('Error closing HTTP server', error);
+      }
     }
   }
 
@@ -931,8 +959,10 @@ class DraftsMCPServer {
             if (activeSessionId) {
               log(`Streamable HTTP session closed: ${activeSessionId}`);
               this.streamableSessions.delete(activeSessionId);
+              // Don't call server.close() here - it creates a circular dependency.
+              // The server will be garbage collected when removed from the map.
+              // The transport's close event indicates the connection is already closed.
             }
-            server.close();
           };
 
           await server.connect(transport);
@@ -980,7 +1010,7 @@ class DraftsMCPServer {
       transport.onclose = () => {
         log(`SSE session closed: ${transport.sessionId}`);
         this.sseSessions.delete(transport.sessionId);
-        server.close();
+        // Don't call server.close() here - the session is already being cleaned up
       };
 
       await server.connect(transport);
