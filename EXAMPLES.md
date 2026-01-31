@@ -4,6 +4,8 @@ This directory contains example configuration files for various MCP clients.
 
 ## Claude Desktop
 
+Drag `drafts-mcp-server.mcbp` into Settings > Extensions in the Claude Desktop app, or:
+
 **Location**: `~/Library/Application Support/Claude/claude_desktop_config.json`
 
 ```json
