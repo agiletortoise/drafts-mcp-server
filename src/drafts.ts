@@ -90,6 +90,7 @@ export async function getCurrentWorkspace(): Promise<Workspace> {
  */
 export async function getCurrentDraft(): Promise<Draft | null> {
   const script = `
+    ${formatDateToISOScript}
     tell application "Drafts"
       try
         set theDraft to current draft
@@ -101,9 +102,9 @@ export async function getCurrentDraft(): Promise<Draft | null> {
         set props to props & "<<SEP>>TAGS:" & ((tag list of theDraft) as string)
         set props to props & "<<SEP>>TAG_NAMES:" & tag names of theDraft
         set props to props & "<<SEP>>QUERY_TAG_NAMES:" & query tag names of theDraft
-        set props to props & "<<SEP>>CREATED:" & ((creation date of theDraft) as string)
-        set props to props & "<<SEP>>MODIFIED:" & ((modification date of theDraft) as string)
-        set props to props & "<<SEP>>ACCESSED:" & ((access date of theDraft) as string)
+        set props to props & "<<SEP>>CREATED:" & my formatDateToISO(creation date of theDraft)
+        set props to props & "<<SEP>>MODIFIED:" & my formatDateToISO(modification date of theDraft)
+        set props to props & "<<SEP>>ACCESSED:" & my formatDateToISO(access date of theDraft)
         set props to props & "<<SEP>>PERMALINK:" & permalink of theDraft
         set props to props & "<<SEP>>CREATION_LAT:" & creation latitude of theDraft
         set props to props & "<<SEP>>CREATION_LON:" & creation longitude of theDraft
@@ -135,6 +136,7 @@ export async function getWorkspaceDrafts(
   const escapedWorkspace = escapeAppleScriptString(workspaceName);
 
   const script = `
+    ${formatDateToISOScript}
     tell application "Drafts"
       set targetWorkspace to workspace "${escapedWorkspace}"
 
@@ -154,9 +156,9 @@ export async function getWorkspaceDrafts(
         set props to props & "<<SEP>>TAGS:" & ((tag list of theDraft) as string)
         set props to props & "<<SEP>>TAG_NAMES:" & tag names of theDraft
         set props to props & "<<SEP>>QUERY_TAG_NAMES:" & query tag names of theDraft
-        set props to props & "<<SEP>>CREATED:" & ((creation date of theDraft) as string)
-        set props to props & "<<SEP>>MODIFIED:" & ((modification date of theDraft) as string)
-        set props to props & "<<SEP>>ACCESSED:" & ((access date of theDraft) as string)
+        set props to props & "<<SEP>>CREATED:" & my formatDateToISO(creation date of theDraft)
+        set props to props & "<<SEP>>MODIFIED:" & my formatDateToISO(modification date of theDraft)
+        set props to props & "<<SEP>>ACCESSED:" & my formatDateToISO(access date of theDraft)
         set props to props & "<<SEP>>PERMALINK:" & permalink of theDraft
         set props to props & "<<SEP>>CREATION_LAT:" & creation latitude of theDraft
         set props to props & "<<SEP>>CREATION_LON:" & creation longitude of theDraft
@@ -174,13 +176,40 @@ export async function getWorkspaceDrafts(
 }
 
 /**
- * Convert ISO date string (YYYY-MM-DD) to AppleScript date format
+ * AppleScript helper function to format a date as ISO 8601 (locale-independent)
  */
-function toAppleScriptDate(isoDate: string): string {
-  const months = ['January', 'February', 'March', 'April', 'May', 'June',
-    'July', 'August', 'September', 'October', 'November', 'December'];
+const formatDateToISOScript = `
+on formatDateToISO(theDate)
+  set y to year of theDate
+  set m to month of theDate as integer
+  set d to day of theDate
+  set h to hours of theDate
+  set min to minutes of theDate
+  set s to seconds of theDate
+
+  set mStr to text -2 thru -1 of ("0" & m)
+  set dStr to text -2 thru -1 of ("0" & d)
+  set hStr to text -2 thru -1 of ("0" & h)
+  set minStr to text -2 thru -1 of ("0" & min)
+  set sStr to text -2 thru -1 of ("0" & s)
+
+  return (y as string) & "-" & mStr & "-" & dStr & "T" & hStr & ":" & minStr & ":" & sStr & "Z"
+end formatDateToISO
+`;
+
+/**
+ * Generate AppleScript code to create a date from ISO string (locale-independent)
+ * Returns AppleScript code that constructs a date object programmatically
+ */
+function isoDateToAppleScriptDate(isoDate: string, varName: string): string {
   const [year, month, day] = isoDate.split('-').map(Number);
-  return `${months[month - 1]} ${day}, ${year}`;
+  return `set ${varName} to current date
+set year of ${varName} to ${year}
+set month of ${varName} to ${month}
+set day of ${varName} to ${day}
+set hours of ${varName} to 0
+set minutes of ${varName} to 0
+set seconds of ${varName} to 0`;
 }
 
 /**
@@ -209,22 +238,22 @@ export async function getDrafts(filter: DraftFilter): Promise<Draft[]> {
   }
 
   if (filter.createdAfter) {
-    dateSetup.push(`set createdAfterDate to date "${toAppleScriptDate(filter.createdAfter)}"`);
+    dateSetup.push(isoDateToAppleScriptDate(filter.createdAfter, 'createdAfterDate'));
     conditions.push(`creation date > createdAfterDate`);
   }
 
   if (filter.createdBefore) {
-    dateSetup.push(`set createdBeforeDate to date "${toAppleScriptDate(filter.createdBefore)}"`);
+    dateSetup.push(isoDateToAppleScriptDate(filter.createdBefore, 'createdBeforeDate'));
     conditions.push(`creation date < createdBeforeDate`);
   }
 
   if (filter.modifiedAfter) {
-    dateSetup.push(`set modifiedAfterDate to date "${toAppleScriptDate(filter.modifiedAfter)}"`);
+    dateSetup.push(isoDateToAppleScriptDate(filter.modifiedAfter, 'modifiedAfterDate'));
     conditions.push(`modification date > modifiedAfterDate`);
   }
 
   if (filter.modifiedBefore) {
-    dateSetup.push(`set modifiedBeforeDate to date "${toAppleScriptDate(filter.modifiedBefore)}"`);
+    dateSetup.push(isoDateToAppleScriptDate(filter.modifiedBefore, 'modifiedBeforeDate'));
     conditions.push(`modification date < modifiedBeforeDate`);
   }
 
@@ -233,6 +262,7 @@ export async function getDrafts(filter: DraftFilter): Promise<Draft[]> {
     : '';
 
   const script = `
+    ${formatDateToISOScript}
     tell application "Drafts"
       ${dateSetup.join('\n      ')}
       set matchingDrafts to every draft ${whereClause}
@@ -248,9 +278,9 @@ export async function getDrafts(filter: DraftFilter): Promise<Draft[]> {
         set props to props & "<<SEP>>TAGS:" & ((tag list of theDraft) as string)
         set props to props & "<<SEP>>TAG_NAMES:" & tag names of theDraft
         set props to props & "<<SEP>>QUERY_TAG_NAMES:" & query tag names of theDraft
-        set props to props & "<<SEP>>CREATED:" & ((creation date of theDraft) as string)
-        set props to props & "<<SEP>>MODIFIED:" & ((modification date of theDraft) as string)
-        set props to props & "<<SEP>>ACCESSED:" & ((access date of theDraft) as string)
+        set props to props & "<<SEP>>CREATED:" & my formatDateToISO(creation date of theDraft)
+        set props to props & "<<SEP>>MODIFIED:" & my formatDateToISO(modification date of theDraft)
+        set props to props & "<<SEP>>ACCESSED:" & my formatDateToISO(access date of theDraft)
         set props to props & "<<SEP>>PERMALINK:" & permalink of theDraft
         set props to props & "<<SEP>>CREATION_LAT:" & creation latitude of theDraft
         set props to props & "<<SEP>>CREATION_LON:" & creation longitude of theDraft
@@ -300,6 +330,7 @@ export async function getDraft(uuid: string): Promise<Draft | null> {
   const escapedUuid = escapeAppleScriptString(uuid);
 
   const script = `
+    ${formatDateToISOScript}
     tell application "Drafts"
       try
         set theDraft to draft id "${escapedUuid}"
@@ -311,9 +342,9 @@ export async function getDraft(uuid: string): Promise<Draft | null> {
         set props to props & "<<SEP>>TAGS:" & ((tag list of theDraft) as string)
         set props to props & "<<SEP>>TAG_NAMES:" & tag names of theDraft
         set props to props & "<<SEP>>QUERY_TAG_NAMES:" & query tag names of theDraft
-        set props to props & "<<SEP>>CREATED:" & ((creation date of theDraft) as string)
-        set props to props & "<<SEP>>MODIFIED:" & ((modification date of theDraft) as string)
-        set props to props & "<<SEP>>ACCESSED:" & ((access date of theDraft) as string)
+        set props to props & "<<SEP>>CREATED:" & my formatDateToISO(creation date of theDraft)
+        set props to props & "<<SEP>>MODIFIED:" & my formatDateToISO(modification date of theDraft)
+        set props to props & "<<SEP>>ACCESSED:" & my formatDateToISO(access date of theDraft)
         set props to props & "<<SEP>>PERMALINK:" & permalink of theDraft
         set props to props & "<<SEP>>CREATION_LAT:" & creation latitude of theDraft
         set props to props & "<<SEP>>CREATION_LON:" & creation longitude of theDraft
@@ -457,6 +488,7 @@ export async function getTag(tagName: string): Promise<Tag> {
   const escapedTagName = escapeAppleScriptString(tagName);
 
   const script = `
+    ${formatDateToISOScript}
     tell application "Drafts"
       set t to tag "${escapedTagName}"
       set draftList to drafts of t
@@ -471,9 +503,9 @@ export async function getTag(tagName: string): Promise<Tag> {
         set props to props & "<<SEP>>TAGS:" & ((tag list of theDraft) as string)
         set props to props & "<<SEP>>TAG_NAMES:" & tag names of theDraft
         set props to props & "<<SEP>>QUERY_TAG_NAMES:" & query tag names of theDraft
-        set props to props & "<<SEP>>CREATED:" & ((creation date of theDraft) as string)
-        set props to props & "<<SEP>>MODIFIED:" & ((modification date of theDraft) as string)
-        set props to props & "<<SEP>>ACCESSED:" & ((access date of theDraft) as string)
+        set props to props & "<<SEP>>CREATED:" & my formatDateToISO(creation date of theDraft)
+        set props to props & "<<SEP>>MODIFIED:" & my formatDateToISO(modification date of theDraft)
+        set props to props & "<<SEP>>ACCESSED:" & my formatDateToISO(access date of theDraft)
         set props to props & "<<SEP>>PERMALINK:" & permalink of theDraft
         set props to props & "<<SEP>>CREATION_LAT:" & creation latitude of theDraft
         set props to props & "<<SEP>>CREATION_LON:" & creation longitude of theDraft
@@ -498,6 +530,7 @@ export async function searchDrafts(query: string): Promise<Draft[]> {
   const escapedQuery = escapeAppleScriptString(query);
 
   const script = `
+    ${formatDateToISOScript}
     tell application "Drafts"
       set searchResults to every draft whose content contains "${escapedQuery}"
       set results to ""
@@ -511,9 +544,9 @@ export async function searchDrafts(query: string): Promise<Draft[]> {
         set props to props & "<<SEP>>TAGS:" & ((tag list of theDraft) as string)
         set props to props & "<<SEP>>TAG_NAMES:" & tag names of theDraft
         set props to props & "<<SEP>>QUERY_TAG_NAMES:" & query tag names of theDraft
-        set props to props & "<<SEP>>CREATED:" & ((creation date of theDraft) as string)
-        set props to props & "<<SEP>>MODIFIED:" & ((modification date of theDraft) as string)
-        set props to props & "<<SEP>>ACCESSED:" & ((access date of theDraft) as string)
+        set props to props & "<<SEP>>CREATED:" & my formatDateToISO(creation date of theDraft)
+        set props to props & "<<SEP>>MODIFIED:" & my formatDateToISO(modification date of theDraft)
+        set props to props & "<<SEP>>ACCESSED:" & my formatDateToISO(access date of theDraft)
         set props to props & "<<SEP>>PERMALINK:" & permalink of theDraft
         set props to props & "<<SEP>>CREATION_LAT:" & creation latitude of theDraft
         set props to props & "<<SEP>>CREATION_LON:" & creation longitude of theDraft
@@ -643,12 +676,11 @@ export async function openDraft(uuid: string): Promise<boolean> {
 // Helper functions for parsing AppleScript output
 
 /**
- * Parse AppleScript date string to ISO 8601 format
+ * Parse date string from AppleScript (already in ISO 8601 format from formatDateToISO)
  */
 function parseAppleScriptDate(dateStr: string): string {
-  // AppleScript format: "Monday, November 10, 2025 at 7:56:32 AM"
-  const date = new Date(dateStr.replace(' at ', ' '));
-  return date.toISOString();
+  // Dates are now returned in ISO format from AppleScript: "2025-11-10T07:56:32Z"
+  return dateStr;
 }
 
 function parseDraftProperties(propsStr: string): Draft {
