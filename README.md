@@ -19,7 +19,7 @@ For additional discussion of uses, see [the Drafts forum](https://forums.getdraf
 - [Drafts](https://getdrafts.com) app v50.0.3 or greater installed
 - Node.js 18 or higher
 
-## Installation
+## Installation & Configuration
 
 ### Quick Start (After Publishing to npm)
 
@@ -64,7 +64,7 @@ node dist/index.js
 
 ### Configuration for Claude Desktop
 
-The easiest way to use this MCP with the Claude Desktop app by installing the MCPB version. To do so:
+The easiest way to use this MCP with the Claude Desktop app is by installing the MCPB version. To do so:
 
 * Download the [drafts-mcp-server.mcpb](https://github.com/agiletortoise/drafts-mcp-server/blob/main/drafts-mcp-server.mcpb?raw=true) from the project to your Mac.
 * Open Claude Desktop
@@ -84,7 +84,7 @@ You will need to have Node installed on your Mac so make the `npx` command avail
 brew install node
 ```
 
-Add the below to the Claude Desktop confguration file (`~/Library/Application Support/Claude/claude_desktop_config.json`), and relaunch Claude.
+Add the below to the Claude Desktop configuration file (`~/Library/Application Support/Claude/claude_desktop_config.json`), and relaunch Claude.
 
 ```json
 {
@@ -168,7 +168,7 @@ Or if globally installed:
 
 [LM Studio](https://lmstudio.ai/) & [Open WebUI](https://github.com/open-webui/open-webui) support the [Streamable HTTP Transport](https://modelcontextprotocol.io/specification/2025-06-18/basic/transports#streamable-http). 
 
-To get running quickly, start the server with the `MCP_TRANSPORT` environment varibale set to `http`. Other available environment variables are described in the Transport Configuration section below. 
+To get running quickly, start the server with the `MCP_TRANSPORT` environment variable set to `http`. Other available environment variables are described in the Transport Configuration section below. 
 
 ```bash
 MCP_TRANSPORT=http node /absolute/path/to/drafts-mcp-server/dist/index.js
@@ -186,7 +186,7 @@ Then point the LM Studio or Open WebUI tool to `http://<MCP_HTTP_HOST>:<MCP_HTTP
 }
 ```
 
-Or if you will only be access it locally, fire it up with the node comand and MCP_TRANSPORT set to `http`:
+Or if you will only be access the Drafts MCP Server locally, fire it up with the node comand and MCP_TRANSPORT set to `http`:
 
 ```json
 {
