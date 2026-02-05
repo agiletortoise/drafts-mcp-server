@@ -19,7 +19,7 @@ For additional discussion of uses, see [the Drafts forum](https://forums.getdraf
 - [Drafts](https://getdrafts.com) app v50.0.3 or greater installed
 - Node.js 18 or higher
 
-## Installation
+## Installation & Configuration
 
 ### Quick Start (After Publishing to npm)
 
@@ -64,7 +64,7 @@ node dist/index.js
 
 ### Configuration for Claude Desktop
 
-The easiest way to use this MCP with the Claude Desktop app by installing the MCPB version. To do so:
+The easiest way to use this MCP with the Claude Desktop app is by installing the MCPB version. To do so:
 
 * Download the [drafts-mcp-server.mcpb](https://github.com/agiletortoise/drafts-mcp-server/blob/main/drafts-mcp-server.mcpb?raw=true) from the project to your Mac.
 * Open Claude Desktop
@@ -84,7 +84,7 @@ You will need to have Node installed on your Mac so make the `npx` command avail
 brew install node
 ```
 
-Add the below to the Claude Desktop confguration file (`~/Library/Application Support/Claude/claude_desktop_config.json`), and relaunch Claude.
+Add the below to the Claude Desktop configuration file (`~/Library/Application Support/Claude/claude_desktop_config.json`), and relaunch Claude.
 
 ```json
 {
@@ -97,7 +97,23 @@ Add the below to the Claude Desktop confguration file (`~/Library/Application Su
 }
 ```
 
-**For local development/testing** (before publishing), use:
+This uses the default STDIO transport which is recommended. If you need HTTP transport instead, set the environment variable:
+
+```json
+{
+  "mcpServers": {
+    "drafts": {
+      "command": "npx",
+      "args": ["@agiletortoise/drafts-mcp-server"],
+      "env": {
+        "MCP_TRANSPORT": "http"
+      }
+    }
+  }
+}
+```
+
+**For local development/testing**, use:
 
 ```json
 {
@@ -110,7 +126,7 @@ Add the below to the Claude Desktop confguration file (`~/Library/Application Su
 }
 ```
 
-Or if globally installed:
+**If globally installed**, use:
 
 ```json
 {
@@ -150,6 +166,44 @@ Or if globally installed:
 }
 ```
 
+### Configuration for Clients that support Streamable HTTP Transport (LM Studio, Open WebUI)
+
+[LM Studio](https://lmstudio.ai/) & [Open WebUI](https://github.com/open-webui/open-webui) support the [Streamable HTTP Transport](https://modelcontextprotocol.io/specification/2025-06-18/basic/transports#streamable-http). 
+
+To get running quickly, start the server with the `MCP_TRANSPORT` environment variable set to `http`. Other available environment variables are described in the Transport Configuration section below. 
+
+```bash
+MCP_TRANSPORT=http node /absolute/path/to/drafts-mcp-server/dist/index.js
+```
+
+Then point the LM Studio or Open WebUI tool to `http://<MCP_HTTP_HOST>:<MCP_HTTP_PORT>/mcp` which by default is `http://127.0.0.1:3005/mcp`.
+
+```json
+{
+  "mcpServers": {
+    "drafts": {
+      "url": "http://127.0.0.1:3005/mcp"
+    }
+  }
+}
+```
+
+Alternatively, if you only access the Drafts MCP Server locally, you can start the server with the `node` command and `MCP_TRANSPORT` set to `http`:
+
+```json
+{
+  "mcpServers": {
+    "drafts": {
+      "command": "node",
+      "args": ["/absolute/path/to/drafts-mcp-server/dist/index.js"],
+      "env": {
+        "MCP_TRANSPORT": "http"
+      }
+    }
+  }
+}
+```
+
 ### Configuration for Claude Code
 
 Claude Code (the CLI tool) can be configured using the `/mcp` command or by editing the settings file directly.
@@ -168,12 +222,87 @@ claude mcp add drafts -- node /absolute/path/to/drafts-mcp-server/dist/index.js
 
 After adding, restart Claude Code or start a new session for the MCP server to be available.
 
+For troubleshooting, check the log file `~/Library/Logs/Claude/mcp-server-Drafts.log`.
+
 ## Permissions
 
 The first time the server runs, macOS will ask for permissions:
 
 1. **System Preferences** > **Security & Privacy** > **Privacy** > **Automation**
 2. Allow the MCP host (e.g., Claude Desktop, Claude Code, Cursor) to control **Drafts**
+
+## Transport Configuration
+
+This server supports multiple transport modes. Most users will use the default STDIO transport. HTTP transport is useful for web-based clients or when running the server separately from the MCP client.
+
+### STDIO Transport (Default)
+
+The default transport works with Claude Desktop, Claude Code, Cursor, and most clients:
+
+```bash
+# Default - no environment variable needed
+node /absolute/path/to/drafts-mcp-server/dist/index.js
+
+# Or explicitly
+MCP_TRANSPORT=stdio node /absolute/path/to/drafts-mcp-server/dist/index.js
+```
+
+### HTTP Transport (Streamable HTTP + SSE Fallback)
+
+For clients that require HTTP endpoints (e.g., LM Studio, web-based clients):
+
+```bash
+MCP_TRANSPORT=http node /absolute/path/to/drafts-mcp-server/dist/index.js
+```
+
+**Endpoints:**
+- `http://127.0.0.1:3005/mcp` - Streamable HTTP (POST initialize, GET for SSE, DELETE to close)
+- `http://127.0.0.1:3005/sse` - Legacy SSE endpoint (deprecated, for compatibility)
+- `http://127.0.0.1:3005/messages` - Legacy SSE message endpoint (deprecated)
+
+**Environment Variables:**
+- `MCP_TRANSPORT` - Which Transport to use `http` (default: `stdio`)
+- `MCP_HTTP_HOST` - HTTP server host (default: `127.0.0.1`)
+- `MCP_HTTP_PORT` - HTTP server port (default: `3005`)
+- `MCP_HTTP_PATH` - Streamable HTTP endpoint path (default: `/mcp`)
+- `MCP_JSON_RESPONSE` - Set to `true` for JSON response mode (default: `false`, use for clients like LM Studio that expect direct JSON instead of SSE)
+- `MCP_VERBOSE` - Set to `true` to enable verbose logging (default: `false`)
+
+### Verbose Logging
+
+Enable verbose logging to see detailed lifecycle events and debugging information:
+
+```bash
+# Using environment variable
+MCP_VERBOSE=true node /absolute/path/to/drafts-mcp-server/dist/index.js
+
+# Or using CLI flag
+node /absolute/path/to/drafts-mcp-server/dist/index.js --verbose
+```
+
+Verbose logging output includes:
+- Server startup and shutdown events
+- Session creation and destruction (both Streamable HTTP and SSE)
+- HTTP request details (method, URL, headers, POST bodies)
+- HTTP response status codes, content types, and response sizes
+- AppleScript execution (scripts sent to Drafts, results received, execution time)
+- Error messages with full context
+- Request body parsing (empty, malformed, or valid JSON)
+
+Example output:
+```
+[2026-01-30T10:15:23.456Z] Starting HTTP transport mode {"host":"127.0.0.1","port":3005,"streamablePath":"/mcp"}
+[2026-01-30T10:15:25.123Z] Streamable HTTP POST request {"url":"/mcp","headers":{...}}
+[2026-01-30T10:15:25.234Z] POST body received {"jsonrpc":"2.0","method":"initialize","params":{...}}
+[2026-01-30T10:15:25.345Z] POST body processed
+[2026-01-30T10:15:25.456Z] Initialize request detected, creating new streamable HTTP session
+[2026-01-30T10:15:25.567Z] Streamable HTTP session initialized: a1b2c3d4-e5f6-47a8-b9c0-d1e2f3a4b5c6
+[2026-01-30T10:15:25.678Z] Handling request with session a1b2c3d4-e5f6-47a8-b9c0-d1e2f3a4b5c6, method: POST
+[2026-01-30T10:15:25.789Z] Executing AppleScript {"script":"tell application \\"Drafts\\"\\n..."}
+[2026-01-30T10:15:25.890Z] AppleScript execution successful {"result":"Inbox, Archive, ...", "duration":"101ms"}
+[2026-01-30T10:15:25.901Z] Response sent: status=200, contentType=text/event-stream, size=1024 bytes
+[2026-01-30T10:15:26.012Z] HTTP server started on 127.0.0.1:3005
+```
 
 ## Available Tools
 
