@@ -1068,7 +1068,7 @@ class DraftsMCPServer {
   }
 
   private async runHttp(): Promise<void> {
-    const port = Number.parseInt(process.env.MCP_HTTP_PORT ?? '3000', 10);
+    const port = Number.parseInt(process.env.MCP_HTTP_PORT ?? '3005', 10);
     const host = process.env.MCP_HTTP_HOST ?? '127.0.0.1';
     const streamablePath = process.env.MCP_HTTP_PATH ?? '/mcp';
     this.useJsonResponse = process.env.MCP_JSON_RESPONSE === 'true' || process.argv.includes('--json-response');

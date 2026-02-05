@@ -97,7 +97,7 @@ Add the below to the Claude Desktop confguration file (`~/Library/Application Su
 }
 ```
 
-This uses the default STDIO transport which is recommended. If you need HTTP transport instead (uncommon), set the environment variable:
+This uses the default STDIO transport which is recommended. If you need HTTP transport instead, set the environment variable:
 
 ```json
 {
@@ -164,30 +164,29 @@ Or if globally installed:
 }
 ```
 
-### Configuration for LM Studio (HTTP Transport)
+### Configuration for Clients that support Streamable HTTP Transport (LM Studio, Open WebUI)
 
-LM Studio uses HTTP with an alternative response format. Configure it to use HTTP transport with JSON responses:
+[LM Studio](https://lmstudio.ai/) & [Open WebUI](https://github.com/open-webui/open-webui) support the [Streamable HTTP Transport](https://modelcontextprotocol.io/specification/2025-06-18/basic/transports#streamable-http). 
 
-```bash
-MCP_TRANSPORT=http MCP_JSON_RESPONSE=true node dist/index.js
-```
-
-Or with CLI flag:
+To get running quickly, start the server with the `MCP_TRANSPORT` environment varibale set to `http`. Other available environment variables are described in the Transport Configuration section below. 
 
 ```bash
-node dist/index.js --json-response
+MCP_TRANSPORT=http node /absolute/path/to/drafts-mcp-server/dist/index.js
 ```
 
-Then point LM Studio to `http://127.0.0.1:3000/mcp`.
+Then point the LM Studio or Open WebUI tool to `http://<MCP_HTTP_HOST>:<MCP_HTTP_PORT>/mcp` which by default is `http://127.0.0.1:3005/mcp`.
 
-**Environment Variables:**
-- `MCP_TRANSPORT` - `stdio` (default) or `http`
-- `MCP_HTTP_HOST` - HTTP server host (default: `127.0.0.1`)
-- `MCP_HTTP_PORT` - HTTP server port (default: `3000`)
-- `MCP_HTTP_PATH` - Streamable HTTP endpoint path (default: `/mcp`)
-- `MCP_JSON_RESPONSE` - Set to `true` for JSON response mode (default: `false`, use for clients like LM Studio that expect direct JSON instead of SSE)
-- `MCP_VERBOSE` - Set to `true` to enable verbose logging (default: `false`)
-Or with HTTP transport if needed:
+```json
+{
+  "mcpServers": {
+    "drafts": {
+      "url": "http://127.0.0.1:3005/mcp"
+    }
+  }
+}
+```
+
+Or if you will only be access it locally, fire it up with the node comand and MCP_TRANSPORT set to `http`:
 
 ```json
 {
@@ -202,6 +201,7 @@ Or with HTTP transport if needed:
   }
 }
 ```
+
 ### Configuration for Claude Code
 
 Claude Code (the CLI tool) can be configured using the `/mcp` command or by editing the settings file directly.
@@ -220,6 +220,8 @@ claude mcp add drafts -- node /absolute/path/to/drafts-mcp-server/dist/index.js
 
 After adding, restart Claude Code or start a new session for the MCP server to be available.
 
+The log file `mcp-server-Drafts.log` is helpful. 
+
 ## Permissions
 
 The first time the server runs, macOS will ask for permissions:
@@ -237,10 +239,10 @@ The classic STDIO transport is the default and works with Claude Desktop and mos
 
 ```bash
 # Default - no environment variable needed
-node dist/index.js
+node /absolute/path/to/drafts-mcp-server/dist/index.js
 
 # Or explicitly
-MCP_TRANSPORT=stdio node dist/index.js
+MCP_TRANSPORT=stdio node /absolute/path/to/drafts-mcp-server/dist/index.js
 ```
 
 ### HTTP Transport (Streamable HTTP + SSE Fallback)
@@ -248,18 +250,18 @@ MCP_TRANSPORT=stdio node dist/index.js
 For clients that require HTTP endpoints (e.g., LM Studio, web-based clients):
 
 ```bash
-MCP_TRANSPORT=http node dist/index.js
+MCP_TRANSPORT=http node /absolute/path/to/drafts-mcp-server/dist/index.js
 ```
 
 **Endpoints:**
-- `http://127.0.0.1:3000/mcp` - Streamable HTTP (POST initialize, GET for SSE, DELETE to close)
-- `http://127.0.0.1:3000/sse` - Legacy SSE endpoint (deprecated, for compatibility)
-- `http://127.0.0.1:3000/messages` - Legacy SSE message endpoint (deprecated)
+- `http://127.0.0.1:3005/mcp` - Streamable HTTP (POST initialize, GET for SSE, DELETE to close)
+- `http://127.0.0.1:3005/sse` - Legacy SSE endpoint (deprecated, for compatibility)
+- `http://127.0.0.1:3005/messages` - Legacy SSE message endpoint (deprecated)
 
 **Environment Variables:**
-- `MCP_TRANSPORT` - `stdio` (default) or `http`
+- `MCP_TRANSPORT` - Which Transport to use `http` (default: `stdio`)
 - `MCP_HTTP_HOST` - HTTP server host (default: `127.0.0.1`)
-- `MCP_HTTP_PORT` - HTTP server port (default: `3000`)
+- `MCP_HTTP_PORT` - HTTP server port (default: `3005`)
 - `MCP_HTTP_PATH` - Streamable HTTP endpoint path (default: `/mcp`)
 - `MCP_JSON_RESPONSE` - Set to `true` for JSON response mode (default: `false`, use for clients like LM Studio that expect direct JSON instead of SSE)
 - `MCP_VERBOSE` - Set to `true` to enable verbose logging (default: `false`)
@@ -270,10 +272,10 @@ Enable verbose logging to see detailed lifecycle events and debugging informatio
 
 ```bash
 # Using environment variable
-MCP_VERBOSE=true node dist/index.js
+MCP_VERBOSE=true node /absolute/path/to/drafts-mcp-server/dist/index.js
 
 # Or using CLI flag
-node dist/index.js --verbose
+node /absolute/path/to/drafts-mcp-server/dist/index.js --verbose
 ```
 
 Verbose logging output includes:
@@ -281,13 +283,13 @@ Verbose logging output includes:
 - Session creation and destruction (both Streamable HTTP and SSE)
 - HTTP request details (method, URL, headers, POST bodies)
 - HTTP response status codes, content types, and response sizes
-- **AppleScript execution** (scripts sent to Drafts, results received, execution time)
+- AppleScript execution (scripts sent to Drafts, results received, execution time)
 - Error messages with full context
 - Request body parsing (empty, malformed, or valid JSON)
 
 Example output:
 ```
-[2026-01-30T10:15:23.456Z] Starting HTTP transport mode {"host":"127.0.0.1","port":3000,"streamablePath":"/mcp"}
+[2026-01-30T10:15:23.456Z] Starting HTTP transport mode {"host":"127.0.0.1","port":3005,"streamablePath":"/mcp"}
 [2026-01-30T10:15:25.123Z] Streamable HTTP POST request {"url":"/mcp","headers":{...}}
 [2026-01-30T10:15:25.234Z] POST body received {"jsonrpc":"2.0","method":"initialize","params":{...}}
 [2026-01-30T10:15:25.345Z] POST body processed
@@ -297,7 +299,7 @@ Example output:
 [2026-01-30T10:15:25.789Z] Executing AppleScript {"script":"tell application \\"Drafts\\"\\n..."}
 [2026-01-30T10:15:25.890Z] AppleScript execution successful {"result":"Inbox, Archive, ...", "duration":"101ms"}
 [2026-01-30T10:15:25.901Z] Response sent: status=200, contentType=text/event-stream, size=1024 bytes
-[2026-01-30T10:15:26.012Z] HTTP server started on 127.0.0.1:3000
+[2026-01-30T10:15:26.012Z] HTTP server started on 127.0.0.1:3005
 ```
 
 ## Available Tools
