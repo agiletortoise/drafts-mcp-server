@@ -97,7 +97,21 @@ Add the below to the Claude Desktop confguration file (`~/Library/Application Su
 }
 ```
 
-**For local development/testing** (before publishing), use:
+This uses the default STDIO transport which is recommended. If you need HTTP transport instead (uncommon), set the environment variable:
+
+```json
+{
+  "mcpServers": {
+    "drafts": {
+      "command": "npx",
+      "args": ["@agiletortoise/drafts-mcp-server"],
+      "env": {
+        "MCP_TRANSPORT": "http"
+      }
+    }
+  }
+}
+```
 
 ```json
 {
@@ -150,6 +164,44 @@ Or if globally installed:
 }
 ```
 
+### Configuration for LM Studio (HTTP Transport)
+
+LM Studio uses HTTP with an alternative response format. Configure it to use HTTP transport with JSON responses:
+
+```bash
+MCP_TRANSPORT=http MCP_JSON_RESPONSE=true node dist/index.js
+```
+
+Or with CLI flag:
+
+```bash
+node dist/index.js --json-response
+```
+
+Then point LM Studio to `http://127.0.0.1:3000/mcp`.
+
+**Environment Variables:**
+- `MCP_TRANSPORT` - `stdio` (default) or `http`
+- `MCP_HTTP_HOST` - HTTP server host (default: `127.0.0.1`)
+- `MCP_HTTP_PORT` - HTTP server port (default: `3000`)
+- `MCP_HTTP_PATH` - Streamable HTTP endpoint path (default: `/mcp`)
+- `MCP_JSON_RESPONSE` - Set to `true` for JSON response mode (default: `false`, use for clients like LM Studio that expect direct JSON instead of SSE)
+- `MCP_VERBOSE` - Set to `true` to enable verbose logging (default: `false`)
+Or with HTTP transport if needed:
+
+```json
+{
+  "mcpServers": {
+    "drafts": {
+      "command": "node",
+      "args": ["/absolute/path/to/drafts-mcp-server/dist/index.js"],
+      "env": {
+        "MCP_TRANSPORT": "http"
+      }
+    }
+  }
+}
+```
 ### Configuration for Claude Code
 
 Claude Code (the CLI tool) can be configured using the `/mcp` command or by editing the settings file directly.
@@ -174,6 +226,79 @@ The first time the server runs, macOS will ask for permissions:
 
 1. **System Preferences** > **Security & Privacy** > **Privacy** > **Automation**
 2. Allow the MCP host (e.g., Claude Desktop, Claude Code, Cursor) to control **Drafts**
+
+## Transport Configuration
+
+This server supports multiple transport modes:
+
+### STDIO Transport (Default for Claude Desktop)
+
+The classic STDIO transport is the default and works with Claude Desktop and most clients:
+
+```bash
+# Default - no environment variable needed
+node dist/index.js
+
+# Or explicitly
+MCP_TRANSPORT=stdio node dist/index.js
+```
+
+### HTTP Transport (Streamable HTTP + SSE Fallback)
+
+For clients that require HTTP endpoints (e.g., LM Studio, web-based clients):
+
+```bash
+MCP_TRANSPORT=http node dist/index.js
+```
+
+**Endpoints:**
+- `http://127.0.0.1:3000/mcp` - Streamable HTTP (POST initialize, GET for SSE, DELETE to close)
+- `http://127.0.0.1:3000/sse` - Legacy SSE endpoint (deprecated, for compatibility)
+- `http://127.0.0.1:3000/messages` - Legacy SSE message endpoint (deprecated)
+
+**Environment Variables:**
+- `MCP_TRANSPORT` - `stdio` (default) or `http`
+- `MCP_HTTP_HOST` - HTTP server host (default: `127.0.0.1`)
+- `MCP_HTTP_PORT` - HTTP server port (default: `3000`)
+- `MCP_HTTP_PATH` - Streamable HTTP endpoint path (default: `/mcp`)
+- `MCP_JSON_RESPONSE` - Set to `true` for JSON response mode (default: `false`, use for clients like LM Studio that expect direct JSON instead of SSE)
+- `MCP_VERBOSE` - Set to `true` to enable verbose logging (default: `false`)
+
+### Verbose Logging
+
+Enable verbose logging to see detailed lifecycle events and debugging information:
+
+```bash
+# Using environment variable
+MCP_VERBOSE=true node dist/index.js
+
+# Or using CLI flag
+node dist/index.js --verbose
+```
+
+Verbose logging output includes:
+- Server startup and shutdown events
+- Session creation and destruction (both Streamable HTTP and SSE)
+- HTTP request details (method, URL, headers, POST bodies)
+- HTTP response status codes, content types, and response sizes
+- **AppleScript execution** (scripts sent to Drafts, results received, execution time)
+- Error messages with full context
+- Request body parsing (empty, malformed, or valid JSON)
+
+Example output:
+```
+[2026-01-30T10:15:23.456Z] Starting HTTP transport mode {"host":"127.0.0.1","port":3000,"streamablePath":"/mcp"}
+[2026-01-30T10:15:25.123Z] Streamable HTTP POST request {"url":"/mcp","headers":{...}}
+[2026-01-30T10:15:25.234Z] POST body received {"jsonrpc":"2.0","method":"initialize","params":{...}}
+[2026-01-30T10:15:25.345Z] POST body processed
+[2026-01-30T10:15:25.456Z] Initialize request detected, creating new streamable HTTP session
+[2026-01-30T10:15:25.567Z] Streamable HTTP session initialized: a1b2c3d4-e5f6-47a8-b9c0-d1e2f3a4b5c6
+[2026-01-30T10:15:25.678Z] Handling request with session a1b2c3d4-e5f6-47a8-b9c0-d1e2f3a4b5c6, method: POST
+[2026-01-30T10:15:25.789Z] Executing AppleScript {"script":"tell application \\"Drafts\\"\\n..."}
+[2026-01-30T10:15:25.890Z] AppleScript execution successful {"result":"Inbox, Archive, ...", "duration":"101ms"}
+[2026-01-30T10:15:25.901Z] Response sent: status=200, contentType=text/event-stream, size=1024 bytes
+[2026-01-30T10:15:26.012Z] HTTP server started on 127.0.0.1:3000
+```
 
 ## Available Tools
 
