@@ -113,6 +113,8 @@ This uses the default STDIO transport which is recommended. If you need HTTP tra
 }
 ```
 
+**For local development/testing**, use:
+
 ```json
 {
   "mcpServers": {
@@ -124,7 +126,7 @@ This uses the default STDIO transport which is recommended. If you need HTTP tra
 }
 ```
 
-Or if globally installed:
+**If globally installed**, use:
 
 ```json
 {
@@ -186,7 +188,7 @@ Then point the LM Studio or Open WebUI tool to `http://<MCP_HTTP_HOST>:<MCP_HTTP
 }
 ```
 
-Or if you will only be access the Drafts MCP Server locally, fire it up with the node comand and MCP_TRANSPORT set to `http`:
+Alternatively, if you only access the Drafts MCP Server locally, you can start the server with the `node` command and `MCP_TRANSPORT` set to `http`:
 
 ```json
 {
@@ -220,7 +222,7 @@ claude mcp add drafts -- node /absolute/path/to/drafts-mcp-server/dist/index.js
 
 After adding, restart Claude Code or start a new session for the MCP server to be available.
 
-The log file `mcp-server-Drafts.log` is helpful. 
+For troubleshooting, check the log file `~/Library/Logs/Claude/mcp-server-Drafts.log`.
 
 ## Permissions
 
@@ -231,11 +233,11 @@ The first time the server runs, macOS will ask for permissions:
 
 ## Transport Configuration
 
-This server supports multiple transport modes:
+This server supports multiple transport modes. Most users will use the default STDIO transport. HTTP transport is useful for web-based clients or when running the server separately from the MCP client.
 
-### STDIO Transport (Default for Claude Desktop)
+### STDIO Transport (Default)
 
-The classic STDIO transport is the default and works with Claude Desktop and most clients:
+The default transport works with Claude Desktop, Claude Code, Cursor, and most clients:
 
 ```bash
 # Default - no environment variable needed
