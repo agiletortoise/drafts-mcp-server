@@ -50,6 +50,72 @@ export interface DraftFilter {
   modifiedBefore?: string;
 }
 
+const fieldSeparator = '<<SEP>>';
+const draftSeparator = '<<END>>';
+
+/**
+ * Shared AppleScript helpers for ISO dates and safe field serialization.
+ */
+const applescriptHelpers = `
+on formatDateToISO(theDate)
+  set y to year of theDate
+  set m to month of theDate as integer
+  set d to day of theDate
+  set h to hours of theDate
+  set min to minutes of theDate
+  set s to seconds of theDate
+
+  set mStr to text -2 thru -1 of ("0" & m)
+  set dStr to text -2 thru -1 of ("0" & d)
+  set hStr to text -2 thru -1 of ("0" & h)
+  set minStr to text -2 thru -1 of ("0" & min)
+  set sStr to text -2 thru -1 of ("0" & s)
+
+  return (y as string) & "-" & mStr & "-" & dStr & "T" & hStr & ":" & minStr & ":" & sStr & "Z"
+end formatDateToISO
+
+on replaceText(findText, replaceText, sourceText)
+  set savedDelimiters to AppleScript's text item delimiters
+  set AppleScript's text item delimiters to findText
+  set textItems to every text item of sourceText
+  set AppleScript's text item delimiters to replaceText
+  set replacedText to textItems as text
+  set AppleScript's text item delimiters to savedDelimiters
+  return replacedText
+end replaceText
+
+on escapeFieldValue(theValue)
+  set escapedValue to my replaceText("\\", "\\\\", theValue as text)
+  set escapedValue to my replaceText("${fieldSeparator}", "\\S", escapedValue)
+  set escapedValue to my replaceText("${draftSeparator}", "\\E", escapedValue)
+  return escapedValue
+end escapeFieldValue
+
+on appendEncodedField(existingProps, fieldName, fieldValue)
+  return existingProps & "${fieldSeparator}" & fieldName & ":" & my escapeFieldValue(fieldValue)
+end appendEncodedField
+
+on serializeDraft(theDraft)
+  set props to "ID:" & my escapeFieldValue(id of theDraft)
+  set props to my appendEncodedField(props, "TITLE", title of theDraft)
+  set props to my appendEncodedField(props, "CONTENT", content of theDraft)
+  set props to my appendEncodedField(props, "FLAGGED", flagged of theDraft)
+  set props to my appendEncodedField(props, "FOLDER", folder of theDraft)
+  set props to my appendEncodedField(props, "TAGS", (tag list of theDraft) as string)
+  set props to my appendEncodedField(props, "TAG_NAMES", tag names of theDraft)
+  set props to my appendEncodedField(props, "QUERY_TAG_NAMES", query tag names of theDraft)
+  set props to my appendEncodedField(props, "CREATED", my formatDateToISO(creation date of theDraft))
+  set props to my appendEncodedField(props, "MODIFIED", my formatDateToISO(modification date of theDraft))
+  set props to my appendEncodedField(props, "ACCESSED", my formatDateToISO(access date of theDraft))
+  set props to my appendEncodedField(props, "PERMALINK", permalink of theDraft)
+  set props to my appendEncodedField(props, "CREATION_LAT", creation latitude of theDraft)
+  set props to my appendEncodedField(props, "CREATION_LON", creation longitude of theDraft)
+  set props to my appendEncodedField(props, "MODIFICATION_LAT", modification latitude of theDraft)
+  set props to my appendEncodedField(props, "MODIFICATION_LON", modification longitude of theDraft)
+  return props
+end serializeDraft
+`;
+
 /**
  * List all workspaces in Drafts
  */
@@ -90,27 +156,11 @@ export async function getCurrentWorkspace(): Promise<Workspace> {
  */
 export async function getCurrentDraft(): Promise<Draft | null> {
   const script = `
-    ${formatDateToISOScript}
+    ${applescriptHelpers}
     tell application "Drafts"
       try
         set theDraft to current draft
-        set props to "ID:" & id of theDraft
-        set props to props & "<<SEP>>TITLE:" & title of theDraft
-        set props to props & "<<SEP>>CONTENT:" & content of theDraft
-        set props to props & "<<SEP>>FLAGGED:" & flagged of theDraft
-        set props to props & "<<SEP>>FOLDER:" & folder of theDraft
-        set props to props & "<<SEP>>TAGS:" & ((tag list of theDraft) as string)
-        set props to props & "<<SEP>>TAG_NAMES:" & tag names of theDraft
-        set props to props & "<<SEP>>QUERY_TAG_NAMES:" & query tag names of theDraft
-        set props to props & "<<SEP>>CREATED:" & my formatDateToISO(creation date of theDraft)
-        set props to props & "<<SEP>>MODIFIED:" & my formatDateToISO(modification date of theDraft)
-        set props to props & "<<SEP>>ACCESSED:" & my formatDateToISO(access date of theDraft)
-        set props to props & "<<SEP>>PERMALINK:" & permalink of theDraft
-        set props to props & "<<SEP>>CREATION_LAT:" & creation latitude of theDraft
-        set props to props & "<<SEP>>CREATION_LON:" & creation longitude of theDraft
-        set props to props & "<<SEP>>MODIFICATION_LAT:" & modification latitude of theDraft
-        set props to props & "<<SEP>>MODIFICATION_LON:" & modification longitude of theDraft
-        return props
+        return my serializeDraft(theDraft)
       on error errMsg
         return "NOT_FOUND:" & errMsg
       end try
@@ -136,7 +186,7 @@ export async function getWorkspaceDrafts(
   const escapedWorkspace = escapeAppleScriptString(workspaceName);
 
   const script = `
-    ${formatDateToISOScript}
+    ${applescriptHelpers}
     tell application "Drafts"
       set targetWorkspace to workspace "${escapedWorkspace}"
 
@@ -148,23 +198,7 @@ export async function getWorkspaceDrafts(
       set results to ""
       repeat with d in matchingDrafts
         set theDraft to contents of d
-        set props to "ID:" & id of theDraft
-        set props to props & "<<SEP>>TITLE:" & title of theDraft
-        set props to props & "<<SEP>>CONTENT:" & content of theDraft
-        set props to props & "<<SEP>>FLAGGED:" & flagged of theDraft
-        set props to props & "<<SEP>>FOLDER:" & folder of theDraft
-        set props to props & "<<SEP>>TAGS:" & ((tag list of theDraft) as string)
-        set props to props & "<<SEP>>TAG_NAMES:" & tag names of theDraft
-        set props to props & "<<SEP>>QUERY_TAG_NAMES:" & query tag names of theDraft
-        set props to props & "<<SEP>>CREATED:" & my formatDateToISO(creation date of theDraft)
-        set props to props & "<<SEP>>MODIFIED:" & my formatDateToISO(modification date of theDraft)
-        set props to props & "<<SEP>>ACCESSED:" & my formatDateToISO(access date of theDraft)
-        set props to props & "<<SEP>>PERMALINK:" & permalink of theDraft
-        set props to props & "<<SEP>>CREATION_LAT:" & creation latitude of theDraft
-        set props to props & "<<SEP>>CREATION_LON:" & creation longitude of theDraft
-        set props to props & "<<SEP>>MODIFICATION_LAT:" & modification latitude of theDraft
-        set props to props & "<<SEP>>MODIFICATION_LON:" & modification longitude of theDraft
-        set results to results & props & "<<END>>"
+        set results to results & my serializeDraft(theDraft) & "${draftSeparator}"
       end repeat
 
       return results
@@ -174,28 +208,6 @@ export async function getWorkspaceDrafts(
   const result = await executeAppleScript(script);
   return parseDraftsList(result);
 }
-
-/**
- * AppleScript helper function to format a date as ISO 8601 (locale-independent)
- */
-const formatDateToISOScript = `
-on formatDateToISO(theDate)
-  set y to year of theDate
-  set m to month of theDate as integer
-  set d to day of theDate
-  set h to hours of theDate
-  set min to minutes of theDate
-  set s to seconds of theDate
-
-  set mStr to text -2 thru -1 of ("0" & m)
-  set dStr to text -2 thru -1 of ("0" & d)
-  set hStr to text -2 thru -1 of ("0" & h)
-  set minStr to text -2 thru -1 of ("0" & min)
-  set sStr to text -2 thru -1 of ("0" & s)
-
-  return (y as string) & "-" & mStr & "-" & dStr & "T" & hStr & ":" & minStr & ":" & sStr & "Z"
-end formatDateToISO
-`;
 
 /**
  * Generate AppleScript code to create a date from ISO string (locale-independent)
@@ -262,7 +274,7 @@ export async function getDrafts(filter: DraftFilter): Promise<Draft[]> {
     : '';
 
   const script = `
-    ${formatDateToISOScript}
+    ${applescriptHelpers}
     tell application "Drafts"
       ${dateSetup.join('\n      ')}
       set matchingDrafts to every draft ${whereClause}
@@ -270,23 +282,7 @@ export async function getDrafts(filter: DraftFilter): Promise<Draft[]> {
       set results to ""
       repeat with d in matchingDrafts
         set theDraft to contents of d
-        set props to "ID:" & id of theDraft
-        set props to props & "<<SEP>>TITLE:" & title of theDraft
-        set props to props & "<<SEP>>CONTENT:" & content of theDraft
-        set props to props & "<<SEP>>FLAGGED:" & flagged of theDraft
-        set props to props & "<<SEP>>FOLDER:" & folder of theDraft
-        set props to props & "<<SEP>>TAGS:" & ((tag list of theDraft) as string)
-        set props to props & "<<SEP>>TAG_NAMES:" & tag names of theDraft
-        set props to props & "<<SEP>>QUERY_TAG_NAMES:" & query tag names of theDraft
-        set props to props & "<<SEP>>CREATED:" & my formatDateToISO(creation date of theDraft)
-        set props to props & "<<SEP>>MODIFIED:" & my formatDateToISO(modification date of theDraft)
-        set props to props & "<<SEP>>ACCESSED:" & my formatDateToISO(access date of theDraft)
-        set props to props & "<<SEP>>PERMALINK:" & permalink of theDraft
-        set props to props & "<<SEP>>CREATION_LAT:" & creation latitude of theDraft
-        set props to props & "<<SEP>>CREATION_LON:" & creation longitude of theDraft
-        set props to props & "<<SEP>>MODIFICATION_LAT:" & modification latitude of theDraft
-        set props to props & "<<SEP>>MODIFICATION_LON:" & modification longitude of theDraft
-        set results to results & props & "<<END>>"
+        set results to results & my serializeDraft(theDraft) & "${draftSeparator}"
       end repeat
 
       return results
@@ -306,8 +302,8 @@ export async function createDraft(
   flagged?: boolean
 ): Promise<string> {
   const escapedContent = escapeAppleScriptString(content);
-  const tagList = tags && tags.length > 0 
-    ? `{${tags.map(t => `"${escapeAppleScriptString(t)}"`).join(', ')}}` 
+  const tagList = tags && tags.length > 0
+    ? `{${tags.map(t => `"${escapeAppleScriptString(t)}"`).join(', ')}}`
     : '{}';
 
   const script = `
@@ -330,27 +326,11 @@ export async function getDraft(uuid: string): Promise<Draft | null> {
   const escapedUuid = escapeAppleScriptString(uuid);
 
   const script = `
-    ${formatDateToISOScript}
+    ${applescriptHelpers}
     tell application "Drafts"
       try
         set theDraft to draft id "${escapedUuid}"
-        set props to "ID:" & id of theDraft
-        set props to props & "<<SEP>>TITLE:" & title of theDraft
-        set props to props & "<<SEP>>CONTENT:" & content of theDraft
-        set props to props & "<<SEP>>FLAGGED:" & flagged of theDraft
-        set props to props & "<<SEP>>FOLDER:" & folder of theDraft
-        set props to props & "<<SEP>>TAGS:" & ((tag list of theDraft) as string)
-        set props to props & "<<SEP>>TAG_NAMES:" & tag names of theDraft
-        set props to props & "<<SEP>>QUERY_TAG_NAMES:" & query tag names of theDraft
-        set props to props & "<<SEP>>CREATED:" & my formatDateToISO(creation date of theDraft)
-        set props to props & "<<SEP>>MODIFIED:" & my formatDateToISO(modification date of theDraft)
-        set props to props & "<<SEP>>ACCESSED:" & my formatDateToISO(access date of theDraft)
-        set props to props & "<<SEP>>PERMALINK:" & permalink of theDraft
-        set props to props & "<<SEP>>CREATION_LAT:" & creation latitude of theDraft
-        set props to props & "<<SEP>>CREATION_LON:" & creation longitude of theDraft
-        set props to props & "<<SEP>>MODIFICATION_LAT:" & modification latitude of theDraft
-        set props to props & "<<SEP>>MODIFICATION_LON:" & modification longitude of theDraft
-        return props
+        return my serializeDraft(theDraft)
       on error errMsg
         return "NOT_FOUND:" & errMsg
       end try
@@ -488,30 +468,14 @@ export async function getTag(tagName: string): Promise<Tag> {
   const escapedTagName = escapeAppleScriptString(tagName);
 
   const script = `
-    ${formatDateToISOScript}
+    ${applescriptHelpers}
     tell application "Drafts"
       set t to tag "${escapedTagName}"
       set draftList to drafts of t
       set results to ""
       repeat with d in draftList
         set theDraft to contents of d
-        set props to "ID:" & id of theDraft
-        set props to props & "<<SEP>>TITLE:" & title of theDraft
-        set props to props & "<<SEP>>CONTENT:" & content of theDraft
-        set props to props & "<<SEP>>FLAGGED:" & flagged of theDraft
-        set props to props & "<<SEP>>FOLDER:" & folder of theDraft
-        set props to props & "<<SEP>>TAGS:" & ((tag list of theDraft) as string)
-        set props to props & "<<SEP>>TAG_NAMES:" & tag names of theDraft
-        set props to props & "<<SEP>>QUERY_TAG_NAMES:" & query tag names of theDraft
-        set props to props & "<<SEP>>CREATED:" & my formatDateToISO(creation date of theDraft)
-        set props to props & "<<SEP>>MODIFIED:" & my formatDateToISO(modification date of theDraft)
-        set props to props & "<<SEP>>ACCESSED:" & my formatDateToISO(access date of theDraft)
-        set props to props & "<<SEP>>PERMALINK:" & permalink of theDraft
-        set props to props & "<<SEP>>CREATION_LAT:" & creation latitude of theDraft
-        set props to props & "<<SEP>>CREATION_LON:" & creation longitude of theDraft
-        set props to props & "<<SEP>>MODIFICATION_LAT:" & modification latitude of theDraft
-        set props to props & "<<SEP>>MODIFICATION_LON:" & modification longitude of theDraft
-        set results to results & props & "<<END>>"
+        set results to results & my serializeDraft(theDraft) & "${draftSeparator}"
       end repeat
       return results
     end tell
@@ -530,29 +494,13 @@ export async function searchDrafts(query: string): Promise<Draft[]> {
   const escapedQuery = escapeAppleScriptString(query);
 
   const script = `
-    ${formatDateToISOScript}
+    ${applescriptHelpers}
     tell application "Drafts"
       set searchResults to every draft whose content contains "${escapedQuery}"
       set results to ""
       repeat with d in searchResults
         set theDraft to contents of d
-        set props to "ID:" & id of theDraft
-        set props to props & "<<SEP>>TITLE:" & title of theDraft
-        set props to props & "<<SEP>>CONTENT:" & content of theDraft
-        set props to props & "<<SEP>>FLAGGED:" & flagged of theDraft
-        set props to props & "<<SEP>>FOLDER:" & folder of theDraft
-        set props to props & "<<SEP>>TAGS:" & ((tag list of theDraft) as string)
-        set props to props & "<<SEP>>TAG_NAMES:" & tag names of theDraft
-        set props to props & "<<SEP>>QUERY_TAG_NAMES:" & query tag names of theDraft
-        set props to props & "<<SEP>>CREATED:" & my formatDateToISO(creation date of theDraft)
-        set props to props & "<<SEP>>MODIFIED:" & my formatDateToISO(modification date of theDraft)
-        set props to props & "<<SEP>>ACCESSED:" & my formatDateToISO(access date of theDraft)
-        set props to props & "<<SEP>>PERMALINK:" & permalink of theDraft
-        set props to props & "<<SEP>>CREATION_LAT:" & creation latitude of theDraft
-        set props to props & "<<SEP>>CREATION_LON:" & creation longitude of theDraft
-        set props to props & "<<SEP>>MODIFICATION_LAT:" & modification latitude of theDraft
-        set props to props & "<<SEP>>MODIFICATION_LON:" & modification longitude of theDraft
-        set results to results & props & "<<END>>"
+        set results to results & my serializeDraft(theDraft) & "${draftSeparator}"
       end repeat
       return results
     end tell
@@ -701,20 +649,49 @@ export async function openWorkspace(name: string): Promise<boolean> {
  * Parse date string from AppleScript (already in ISO 8601 format from formatDateToISO)
  */
 function parseAppleScriptDate(dateStr: string): string {
-  // Dates are now returned in ISO format from AppleScript: "2025-11-10T07:56:32Z"
   return dateStr;
 }
 
-function parseDraftProperties(propsStr: string): Draft {
+function decodeFieldValue(value: string): string {
+  let decoded = '';
+
+  for (let i = 0; i < value.length; i += 1) {
+    const current = value[i];
+
+    if (current !== '\\') {
+      decoded += current;
+      continue;
+    }
+
+    const next = value[i + 1];
+
+    if (next === '\\') {
+      decoded += '\\';
+      i += 1;
+    } else if (next === 'S') {
+      decoded += fieldSeparator;
+      i += 1;
+    } else if (next === 'E') {
+      decoded += draftSeparator;
+      i += 1;
+    } else {
+      decoded += current;
+    }
+  }
+
+  return decoded;
+}
+
+export function parseDraftProperties(propsStr: string): Draft {
   const props: Record<string, string> = {};
-  const parts = propsStr.split('<<SEP>>');
+  const parts = propsStr.split(fieldSeparator);
 
   for (const part of parts) {
     const colonIdx = part.indexOf(':');
     if (colonIdx !== -1) {
       const key = part.substring(0, colonIdx);
       const value = part.substring(colonIdx + 1);
-      props[key] = value;
+      props[key] = decodeFieldValue(value);
     }
   }
 
@@ -738,14 +715,14 @@ function parseDraftProperties(propsStr: string): Draft {
   };
 }
 
-function parseDraftsList(output: string): Draft[] {
+export function parseDraftsList(output: string): Draft[] {
   const drafts: Draft[] = [];
 
   if (!output || output.trim() === '') {
     return drafts;
   }
 
-  const entries = output.split('<<END>>').filter(e => e.trim() !== '');
+  const entries = output.split(draftSeparator).filter(e => e.trim() !== '');
 
   for (const entry of entries) {
     drafts.push(parseDraftProperties(entry));
@@ -754,6 +731,6 @@ function parseDraftsList(output: string): Draft[] {
   return drafts;
 }
 
-function parseSingleDraft(output: string): Draft {
+export function parseSingleDraft(output: string): Draft {
   return parseDraftProperties(output);
 }
