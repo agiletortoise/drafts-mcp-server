@@ -282,6 +282,15 @@ program
   });
 
 program
+  .command('remove-tags <uuid> <tags...>')
+  .description('Remove tags from a draft')
+  .action(async (uuid: string, tags: string[]) => {
+    const success = await drafts.removeTagsFromDraft(uuid, tags);
+    if (!success) fail(`Failed to remove tags from draft ${uuid}`);
+    console.log(`Removed tags from draft ${uuid}`);
+  });
+
+program
   .command('search <query>')
   .description('Search drafts by content')
   .action(async (query: string) => {

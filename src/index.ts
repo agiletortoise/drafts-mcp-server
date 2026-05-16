@@ -255,6 +255,32 @@ const TOOLS: Tool[] = [
     },
   },
   {
+    name: 'drafts_remove_tags',
+    description: 'Remove tags from an existing draft',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        uuid: {
+          type: 'string',
+          description: 'The UUID of the draft',
+        },
+        tags: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'Tags to remove from the draft',
+        },
+      },
+      required: ['uuid', 'tags'],
+    },
+    annotations: {
+      title: 'Remove Tags',
+      readOnlyHint: false,
+      destructiveHint: true,
+      idempotentHint: true,
+      openWorldHint: false,
+    },
+  },
+  {
     name: 'drafts_search',
     description: 'Search for drafts using a query string. Returns summaries (no content) — use drafts_get_draft for full content.',
     inputSchema: {
@@ -650,6 +676,22 @@ class DraftsMCPServer {
                   text: success
                     ? `Added tags to draft ${uuid}`
                     : `Failed to add tags to draft ${uuid}`,
+                },
+              ],
+              isError: !success,
+            };
+          }
+
+          case 'drafts_remove_tags': {
+            const { uuid, tags } = args as { uuid: string; tags: string[] };
+            const success = await drafts.removeTagsFromDraft(uuid, tags);
+            return {
+              content: [
+                {
+                  type: 'text',
+                  text: success
+                    ? `Removed tags from draft ${uuid}`
+                    : `Failed to remove tags from draft ${uuid}`,
                 },
               ],
               isError: !success,

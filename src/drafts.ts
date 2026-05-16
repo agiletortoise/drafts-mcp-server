@@ -402,6 +402,38 @@ export async function addTagsToDraft(uuid: string, tags: string[]): Promise<bool
 }
 
 /**
+ * Remove tags from a draft
+ */
+export async function removeTagsFromDraft(uuid: string, tags: string[]): Promise<boolean> {
+  const escapedUuid = escapeAppleScriptString(uuid);
+  const tagsToRemove = tags.map(t => `"${escapeAppleScriptString(t)}"`).join(', ');
+
+  const script = `
+    tell application "Drafts"
+      try
+        set targetDraft to draft id "${escapedUuid}"
+        set tagsToRemove to {${tagsToRemove}}
+        set currentTags to tag list of targetDraft
+        set newTags to {}
+        repeat with t in currentTags
+          set tagName to contents of t
+          if tagsToRemove does not contain tagName then
+            set end of newTags to tagName
+          end if
+        end repeat
+        set tag list of targetDraft to newTags
+        return "SUCCESS"
+      on error errMsg
+        return "ERROR: " & errMsg
+      end try
+    end tell
+  `;
+
+  const result = await executeAppleScript(script);
+  return result === 'SUCCESS';
+}
+
+/**
  * Run an action on a draft
  */
 export async function runAction(
